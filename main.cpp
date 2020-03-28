@@ -97,7 +97,7 @@ int main() {
 				auto insides = edges * sample;
 
 				if (all(greaterThanEqual(insides, vec3(0.0f)))) {
-					DrawPixel(x, y, mkColor({1.0f, 0.0f, 0.0f}));
+					DrawPixel(x, VIEWPORT.y - 1 - y, mkColor({1.0f, 0.0f, 0.0f}));
 				}
 			}
 		}
