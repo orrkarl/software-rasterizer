@@ -112,7 +112,7 @@ void rasterTriangleIndexed(const uvec2& viewport, const std::vector<vec3>& verte
 		auto e1 = edgeMatrix[1];
 		auto e2 = edgeMatrix[2];
 		auto c = edgeMatrix * vec3{1.0f, 1.0f, 1.0f};
-		auto interpolateZ = vertexMatrix * vec3{v0Clip.z, v1Clip.z, v2Clip.z};
+		auto interpolateZ = edgeMatrix * vec3{v0Clip.z, v1Clip.z, v2Clip.z};
 
 		auto edges = transpose(mat3{e0, e1, e2});	
 		for (auto y = 0; y < viewport.y; ++y) {
