@@ -1,5 +1,5 @@
 #include <algorithm>
-#include <array>
+#include <array> 
 #include <chrono>
 #include <cmath>
 #include <GLFW/glfw3.h>
@@ -13,6 +13,17 @@
 
 using namespace glm;
 
+std::ostream& operator<<(std::ostream& os, const glm::mat4& mat) {
+	auto matT = glm::transpose(mat);
+	os << "glm::mat4{" << std::endl;
+	os << '\t' << matT[0] << std::endl;
+	os << '\t' << matT[1] << std::endl;
+	os << '\t' << matT[2] << std::endl;
+	os << '\t' << matT[3] << std::endl;
+	os << "}";
+	return os;
+}
+
 std::vector<mat4> generateRandomTransforms() {
 	std::vector<mat4> objects;
 
@@ -20,19 +31,20 @@ std::vector<mat4> generateRandomTransforms() {
  
     auto M0 = translate(identity, glm::vec3(0, 0, 2.f));
     M0 = rotate(M0, glm::radians(45.f), glm::vec3(0, 1, 0));
-    objects.push_back(M0);
  
     auto M1 = translate(identity, glm::vec3(-3.75f, 0, 0));
     M1 = rotate(M1, glm::radians(30.f), glm::vec3(1, 0, 0));
-    objects.push_back(M1);
  
     auto M2 = translate(identity, glm::vec3(3.75f, 0, 0));
     M2 = rotate(M2, glm::radians(60.f), glm::vec3(0, 1, 0));
-    objects.push_back(M2);
  
     auto M3 = glm::translate(identity, glm::vec3(0, 0, -2.f));
     M3 = rotate(M3, glm::radians(90.f), glm::vec3(0, 0, 1));
-    objects.push_back(M3);
+
+    objects.push_back(M0);
+    //objects.push_back(M1);
+    //objects.push_back(M2);
+    //objects.push_back(M3);
 
 	return objects;
 }
@@ -61,7 +73,6 @@ void rasterTriangleIndexed(const uvec2& viewport, const std::vector<vec4>& verte
 	auto c = edgeMatrix * vec3{1.0f, 1.0f, 1.0f};
 
 	auto edges = transpose(mat3{e0, e1, e2});	
-	
 	for (auto y = 0; y < viewport.y; ++y) {
 		for (auto x = 0; x < viewport.x; ++x) {
 			vec3 sample{x + 0.5f, y + 0.5f, 1.0f};
@@ -71,7 +82,7 @@ void rasterTriangleIndexed(const uvec2& viewport, const std::vector<vec4>& verte
 				auto oneOverW = dot(c, sample);
 				if (oneOverW >= depthBuffer[y * viewport.x + x]) {
 					depthBuffer[y * viewport.x + x] = oneOverW;
-					colorBuffer[y * viewport.x + x] = mkColor(colors[triangleIndex % colors.size()]);
+					colorBuffer[(viewport.y - 1 - y) * viewport.x + x] = mkColor(colors[indices[triangleIndex][0] % 6]);
 				}
 			}
 		}
@@ -124,7 +135,7 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 }
 
 int main() {
-	const uvec2 VIEWPORT{1366, 768};
+	const uvec2 VIEWPORT{1280, 720};
 	const float DEPTH_BUFFER_CLEAR = 0.0f;
 	const Color COLOR_BUFFER_CLEAR = {0, 0, 0, 1};
 	std::vector<float> depthBuffer(VIEWPORT.x * VIEWPORT.y, DEPTH_BUFFER_CLEAR);
@@ -162,7 +173,8 @@ int main() {
 	auto transforms = generateRandomTransforms();
 	
 	auto lastFrameLogTime = std::chrono::high_resolution_clock::now();
-	while (!glfwWindowShouldClose(window)) {
+	//while (!glfwWindowShouldClose(window)) {
+	{
 		auto start = std::chrono::high_resolution_clock::now();
 		std::fill(depthBuffer.begin(), depthBuffer.end(), DEPTH_BUFFER_CLEAR);
 		std::fill(colorBuffer.begin(), colorBuffer.end(), COLOR_BUFFER_CLEAR);
@@ -187,6 +199,7 @@ int main() {
 		}
 		std::this_thread::sleep_for(frameWait);		
 	}
+	while (!glfwWindowShouldClose(window)) {glfwPollEvents();}
 
 	glfwDestroyWindow(window);
 	glfwTerminate();

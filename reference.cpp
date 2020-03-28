@@ -1,9 +1,33 @@
 #include <fstream>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <iomanip>
 #include <iostream>
 #include <string>
 #include <vector>
+
+std::ostream& operator<<(std::ostream& os, const glm::vec2& vec) {
+	return os << "vec2{" << std::setw(9) << vec.x << ", " << std::setw(9) << vec.y << "}";
+}
+
+std::ostream& operator<<(std::ostream& os, const glm::vec3& vec) {
+	return os << "vec3{" << std::setw(9) << vec.x << ", " << std::setw(9) << vec.y << ", " << std::setw(9) << vec.z << "}";
+}
+
+std::ostream& operator<<(std::ostream& os, const glm::vec4& vec) {
+	return os << "vec4{" << std::setw(9) << vec.x << ", " << std::setw(9) << vec.y << ", " << std::setw(9) << vec.z << ", " << std::setw(9) << vec.w << "}";
+}
+
+std::ostream& operator<<(std::ostream& os, const glm::mat4& mat) {
+	const auto matT = glm::transpose(mat);
+	os << "mat4{" << std::endl;
+	os << '\t' << matT[0] << std::endl;
+	os << '\t' << matT[1] << std::endl;
+	os << '\t' << matT[2] << std::endl;
+	os << '\t' << matT[3] << std::endl;
+	os << "}";
+	return os;
+}
 
 namespace partII
 {
@@ -54,9 +78,9 @@ namespace partII
 
         // Change the order of cubes being rendered, see how it changes with and without depth test
         objects.push_back(M0);
-        objects.push_back(M1);
-        objects.push_back(M2);
-        objects.push_back(M3);
+        //objects.push_back(M1);
+        //objects.push_back(M2);
+        //objects.push_back(M3);
     }
 
     glm::vec4 VS(const glm::vec3& pos, const glm::mat4& M, const glm::mat4& V, const glm::mat4& P)
@@ -132,6 +156,7 @@ namespace partII
         glm::mat4 view = glm::lookAt(eye, lookat, up);
         glm::mat4 proj = glm::perspective(glm::radians(60.f), static_cast<float>(g_scWidth) / static_cast<float>(g_scHeight), nearPlane, farPlane);
 
+
         // Loop over objects in the scene
         for (size_t n = 0; n < objects.size(); n++)
         {
@@ -170,6 +195,7 @@ namespace partII
                 float det = glm::determinant(M);
                 if (det >= 0.0f)
                     continue;
+				std::cout << idx << std::endl;
 
                 // Compute the inverse of vertex matrix to use it for setting up edge & constant functions
                 M = inverse(M);
@@ -178,6 +204,7 @@ namespace partII
                 glm::vec3 E0 = M[0];
                 glm::vec3 E1 = M[1];
                 glm::vec3 E2 = M[2];
+
 
                 // Calculate constant function to interpolate 1/w
                 glm::vec3 C = M * glm::vec3(1, 1, 1);

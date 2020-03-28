@@ -1,11 +1,17 @@
 #include "converters.h"
 
+#include <iomanip>
+
+std::ostream& operator<<(std::ostream& os, const glm::vec2& vec) {
+	return os << "vec2{" << std::setw(9) << vec.x << ", " << std::setw(9) << vec.y << "}";
+}
+
 std::ostream& operator<<(std::ostream& os, const glm::vec3& vec) {
-	return os << "glm::vec3{" << vec.x << ", " << vec.y << ", " << vec.z << "}";
+	return os << "vec3{" << std::setw(9) << vec.x << ", " << std::setw(9) << vec.y << ", " << std::setw(9) << vec.z << "}";
 }
 
 std::ostream& operator<<(std::ostream& os, const glm::vec4& vec) {
-	return os << "glm::vec3{" << vec.x << ", " << vec.y << ", " << vec.z << ", " << vec.w << "}";
+	return os << "vec4{" << std::setw(9) << vec.x << ", " << std::setw(9) << vec.y << ", " << std::setw(9) << vec.z << ", " << std::setw(9) << vec.w << "}";
 }
 
 glm::vec4 rasterFromNDC(const glm::vec4& ndc, const glm::uvec2& viewport) {
