@@ -2,6 +2,17 @@
 
 #include <iomanip>
 
+std::ostream& operator<<(std::ostream& os, const glm::mat4& mat) {
+	auto matT = glm::transpose(mat);
+	os << "mat4{" << std::endl;
+	os << '\t' << matT[0] << std::endl;
+	os << '\t' << matT[1] << std::endl;
+	os << '\t' << matT[2] << std::endl;
+	os << '\t' << matT[3] << std::endl;
+	os << "}";
+	return os;
+}
+
 std::ostream& operator<<(std::ostream& os, const glm::vec2& vec) {
 	return os << "vec2{" << std::setw(9) << vec.x << ", " << std::setw(9) << vec.y << "}";
 }
