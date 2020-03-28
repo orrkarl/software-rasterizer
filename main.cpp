@@ -65,6 +65,21 @@ mat3 rasterTriangleSetup(const vec3& v0, const vec3& v1, const vec3& v2) {
 	return transpose(mat3{e0, e1, e2});	
 }
 
+void rasterTriangle(const uvec2& viewport, const vec3& v0, const vec3& v1, const vec3& v2) {
+	auto edges = rasterTriangleSetup(viewportFromNDC(v0, viewport), viewportFromNDC(v1, viewport), viewportFromNDC(v2, viewport));
+
+	for (auto y = 0; y < viewport.y; ++y) {
+		for (auto x = 0; x < viewport.x; ++x) {
+			vec3 sample{x + 0.5f, y + 0.5f, 1.0f};
+			auto insides = edges * sample;
+
+			if (all(greaterThanEqual(insides, vec3(0.0f)))) {
+				DrawPixel(x, viewport.y - 1 - y, mkColor({1.0f, 0.0f, 0.0f}));
+			}
+		}
+	}
+}
+
 int main() {
 	const uvec2 VIEWPORT{640, 480};
 
@@ -88,19 +103,7 @@ int main() {
 		BeginDrawing();
 
 		ClearBackground(BLACK);
-
-		auto edges = rasterTriangleSetup(viewportFromNDC(v0, VIEWPORT), viewportFromNDC(v1, VIEWPORT), viewportFromNDC(v2, VIEWPORT));
-
-		for (auto y = 0; y < VIEWPORT.y; ++y) {
-			for (auto x = 0; x < VIEWPORT.x; ++x) {
-				vec3 sample{x + 0.5f, y + 0.5f, 1.0f};
-				auto insides = edges * sample;
-
-				if (all(greaterThanEqual(insides, vec3(0.0f)))) {
-					DrawPixel(x, VIEWPORT.y - 1 - y, mkColor({1.0f, 0.0f, 0.0f}));
-				}
-			}
-		}
+		rasterTriangle(VIEWPORT, v0, v1, v2);
 
 		EndDrawing();
 	}
