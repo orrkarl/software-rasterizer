@@ -23,7 +23,6 @@ std::ostream& operator<<(std::ostream& os, const glm::mat4& mat) {
 	os << "}";
 	return os;
 }
-
 std::vector<mat4> generateRandomTransforms() {
 	std::vector<mat4> objects;
 
@@ -42,9 +41,9 @@ std::vector<mat4> generateRandomTransforms() {
     M3 = rotate(M3, glm::radians(90.f), glm::vec3(0, 0, 1));
 
     objects.push_back(M0);
-    //objects.push_back(M1);
-    //objects.push_back(M2);
-    //objects.push_back(M3);
+    objects.push_back(M1);
+    objects.push_back(M2);
+    objects.push_back(M3);
 
 	return objects;
 }
@@ -138,6 +137,7 @@ int main() {
 	const uvec2 VIEWPORT{1280, 720};
 	const float DEPTH_BUFFER_CLEAR = 0.0f;
 	const Color COLOR_BUFFER_CLEAR = {0, 0, 0, 1};
+	const bool RENDER_ONCE = false;
 	std::vector<float> depthBuffer(VIEWPORT.x * VIEWPORT.y, DEPTH_BUFFER_CLEAR);
 	std::vector<Color> colorBuffer(VIEWPORT.x * VIEWPORT.y, COLOR_BUFFER_CLEAR);
 	std::chrono::milliseconds frameWait(30);
@@ -173,8 +173,13 @@ int main() {
 	auto transforms = generateRandomTransforms();
 	
 	auto lastFrameLogTime = std::chrono::high_resolution_clock::now();
-	//while (!glfwWindowShouldClose(window)) {
-	{
+	auto rendered = false;
+	while (!glfwWindowShouldClose(window)) {
+		if (RENDER_ONCE && rendered) {
+			glfwPollEvents();
+			continue;
+		}
+		
 		auto start = std::chrono::high_resolution_clock::now();
 		std::fill(depthBuffer.begin(), depthBuffer.end(), DEPTH_BUFFER_CLEAR);
 		std::fill(colorBuffer.begin(), colorBuffer.end(), COLOR_BUFFER_CLEAR);
@@ -197,9 +202,9 @@ int main() {
 			std::cout << "Frame rendering took " << ((end - start).count()) / 1000000 << "ms" << std::endl;
 			lastFrameLogTime = end;
 		}
+		rendered = true;
 		std::this_thread::sleep_for(frameWait);		
 	}
-	while (!glfwWindowShouldClose(window)) {glfwPollEvents();}
 
 	glfwDestroyWindow(window);
 	glfwTerminate();
