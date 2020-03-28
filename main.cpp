@@ -79,9 +79,10 @@ void rasterTriangleIndexed(const uvec2& viewport, const std::vector<vec4>& verte
 
 			if (all(greaterThanEqual(insides, vec3(0.0f)))) {
 				auto oneOverW = dot(c, sample);
-				if (oneOverW >= depthBuffer[y * viewport.x + x]) {
-					depthBuffer[y * viewport.x + x] = oneOverW;
-					colorBuffer[(viewport.y - 1 - y) * viewport.x + x] = mkColor(colors[indices[triangleIndex][0] % 6]);
+				auto bufferIdx = (viewport.y - 1 - y) * viewport.x + x;
+				if (oneOverW >= depthBuffer[bufferIdx]) {
+					depthBuffer[bufferIdx] = oneOverW;
+					colorBuffer[bufferIdx] = mkColor(colors[indices[triangleIndex][0] % colors.size()]);
 				}
 			}
 		}
