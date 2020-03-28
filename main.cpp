@@ -3,27 +3,24 @@
 #include <raylib.h>
 #include <vector>
 
+#include "converters.h"
+
 using namespace glm;
 
-std::ostream& operator<<(std::ostream& os, const vec3& vec) {
-	return os << "vec3{" << vec.x << ", " << vec.y << ", " << vec.z << "}";
-}
-
-vec3 viewportFromNDC(const vec3& ndc, const uvec2& viewport) {
-	return { (ndc.x + 1.0f) * viewport.x / 2, (ndc.y + 1.0f) * viewport.y / 2, ndc.z };
-}
-
-Color mkColor(const vec4& color) {
-	unsigned char r = static_cast<unsigned char>(255 * color.x);
-	unsigned char g = static_cast<unsigned char>(255 * color.y);
-	unsigned char b = static_cast<unsigned char>(255 * color.z);
-	unsigned char a = static_cast<unsigned char>(255 * color.w);
-	return {r, g, b, a};
-}
-
-Color mkColor(const vec3& color) {
-	return mkColor({color, 1.0f});
-}
+const std::vector<vec3> g_cubeVertices{
+    { 1.0f, -1.0f, -1.0f },
+    { 1.0f, -1.0f, 1.0f },
+    { -1.0f, -1.0f, 1.0f },
+    { -1.0f, -1.0f, -1.0f },
+    { 1.0f, 1.0f, -1.0f },
+    {  1.0f, 1.0f, 1.0f },
+    { -1.0f, 1.0f, 1.0f },
+    { -1.0f, 1.0f, -1.0f },
+};
+ 
+const std::vector<uint32_t> cubeIndices{
+    1,3,0, 7,5,4, 4,1,0, 5,2,1, 2,7,3, 0,7,4, 1,2,3, 7,6,5, 4,5,1, 5,6,2, 2,6,7, 0,3,7
+};
 
 int main() {
 	const uvec2 VIEWPORT{640, 480};
