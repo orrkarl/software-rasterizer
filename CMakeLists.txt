@@ -8,3 +8,5 @@ find_package(glm REQUIRED)
 add_executable(raster main.cpp converters.cpp)
 target_link_libraries(raster OpenGL::GL glfw glm)
 
+add_executable(reference reference.cpp)
+

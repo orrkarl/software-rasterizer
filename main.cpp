@@ -113,9 +113,14 @@ const std::vector<vec3> g_cubeColors{
 	glm::vec3(1, 1, 0)
 };
 
-void error_callback(int error, const char* description)
-{
+void errorCallback(int error, const char* description) {
     fprintf(stderr, "Error: %s\n", description);
+}
+
+void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+	if (key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE) {
+		glfwSetWindowShouldClose(window, GL_TRUE);
+	}
 }
 
 int main() {
@@ -130,7 +135,7 @@ int main() {
 		std::cerr << "could not init GLFW" << std::endl;
 		return EXIT_FAILURE;
 	}
-	glfwSetErrorCallback(error_callback);
+	glfwSetErrorCallback(errorCallback);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
 
@@ -140,6 +145,7 @@ int main() {
 		return EXIT_FAILURE;
 	}
 
+	glfwSetKeyCallback(window, keyCallback);
 	glfwMakeContextCurrent(window);
 	glfwSwapInterval(1);
 	glViewport(0, 0, VIEWPORT.x, VIEWPORT.y);
@@ -154,9 +160,10 @@ int main() {
 	auto proj = perspective(glm::radians(60.0f), static_cast<float>(VIEWPORT.x) / static_cast<float>(VIEWPORT.y), zNear, zFar);
 
 	auto transforms = generateRandomTransforms();
-
+	
+	auto lastFrameLogTime = std::chrono::high_resolution_clock::now();
 	while (!glfwWindowShouldClose(window)) {
-		auto start = std::chrono::high_resolution_clock().now();
+		auto start = std::chrono::high_resolution_clock::now();
 		std::fill(depthBuffer.begin(), depthBuffer.end(), DEPTH_BUFFER_CLEAR);
 		std::fill(colorBuffer.begin(), colorBuffer.end(), COLOR_BUFFER_CLEAR);
 
@@ -173,8 +180,11 @@ int main() {
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
-		auto end = std::chrono::high_resolution_clock().now();
-		std::cout << "Frame rendering took " << ((end - start).count()) / 1000000 << "ms" << std::endl;
+		auto end = std::chrono::high_resolution_clock::now();
+		if ((end - lastFrameLogTime) > std::chrono::seconds(1)) {
+			std::cout << "Frame rendering took " << ((end - start).count()) / 1000000 << "ms" << std::endl;
+			lastFrameLogTime = end;
+		}
 		std::this_thread::sleep_for(frameWait);		
 	}
 
