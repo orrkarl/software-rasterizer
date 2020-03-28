@@ -1,4 +1,5 @@
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 #include <raylib.h>
 #include <vector>
@@ -21,6 +22,30 @@ const std::vector<vec3> g_cubeVertices{
 const std::vector<uint32_t> cubeIndices{
     1,3,0, 7,5,4, 4,1,0, 5,2,1, 2,7,3, 0,7,4, 1,2,3, 7,6,5, 4,5,1, 5,6,2, 2,6,7, 0,3,7
 };
+
+std::vector<mat4> createRandomTransforms() {
+	std::vector<mat4> objects;
+
+	const mat4 identity(1.f);
+ 
+    auto M0 = translate(identity, glm::vec3(0, 0, 2.f));
+    M0 = rotate(M0, glm::radians(45.f), glm::vec3(0, 1, 0));
+    objects.push_back(M0);
+ 
+    auto M1 = translate(identity, glm::vec3(-3.75f, 0, 0));
+    M1 = rotate(M1, glm::radians(30.f), glm::vec3(1, 0, 0));
+    objects.push_back(M1);
+ 
+    auto M2 = translate(identity, glm::vec3(3.75f, 0, 0));
+    M2 = rotate(M2, glm::radians(60.f), glm::vec3(0, 1, 0));
+    objects.push_back(M2);
+ 
+    auto M3 = glm::translate(identity, glm::vec3(0, 0, -2.f));
+    M3 = rotate(M3, glm::radians(90.f), glm::vec3(0, 0, 1));
+    objects.push_back(M3);
+
+	return objects;
+}
 
 int main() {
 	const uvec2 VIEWPORT{640, 480};
