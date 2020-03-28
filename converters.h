@@ -2,11 +2,14 @@
 
 #include <glm/glm.hpp>
 #include <iostream>
-#include <raylib.h>
+
+struct Color {
+	unsigned char r, g, b, a;
+};
 
 std::ostream& operator<<(std::ostream& os, const glm::vec3& vec); 
 
-glm::vec3 viewportFromNDC(const glm::vec3& ndc, const glm::uvec2& viewport); 
+glm::vec4 rasterFromNDC(const glm::vec4& ndc, const glm::uvec2& viewport); 
 
 Color mkColor(const glm::vec4& color); 
 

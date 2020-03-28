@@ -4,8 +4,12 @@ std::ostream& operator<<(std::ostream& os, const glm::vec3& vec) {
 	return os << "glm::vec3{" << vec.x << ", " << vec.y << ", " << vec.z << "}";
 }
 
-glm::vec3 viewportFromNDC(const glm::vec3& ndc, const glm::uvec2& viewport) {
-	return { (ndc.x + 1.0f) * viewport.x / 2, (ndc.y + 1.0f) * viewport.y / 2, ndc.z };
+std::ostream& operator<<(std::ostream& os, const glm::vec4& vec) {
+	return os << "glm::vec3{" << vec.x << ", " << vec.y << ", " << vec.z << ", " << vec.w << "}";
+}
+
+glm::vec4 rasterFromNDC(const glm::vec4& ndc, const glm::uvec2& viewport) {
+	return { (ndc.x + ndc.w) * viewport.x / 2, (ndc.w - ndc.y) * viewport.y / 2, ndc.z, ndc.w };
 }
 
 Color mkColor(const glm::vec4& color) {
