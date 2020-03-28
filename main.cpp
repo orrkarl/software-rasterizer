@@ -47,21 +47,7 @@ std::vector<mat4> createRandomTransforms() {
 	return objects;
 }
 
-int main() {
-	const uvec2 VIEWPORT{640, 480};
-
-	SetConfigFlags(FLAG_MSAA_4X_HINT);
-	InitWindow(VIEWPORT.x, VIEWPORT.y, "software rasterization");
-	SetTargetFPS(60);                           
-
-	vec3 v0(-0.5, 0.5, 1.0);
-	vec3 v1(0.5, 0.5, 1.0);
-	vec3 v2(0.0, -0.5, 1.0);
-
-	v0 = viewportFromNDC(v0, VIEWPORT); 
-	v1 = viewportFromNDC(v1, VIEWPORT); 
-	v2 = viewportFromNDC(v2, VIEWPORT); 
-
+mat3 rasterTriangleSetup(const vec3& v0, const vec3& v1, const vec3& v2) {
 	mat3 vertexMatrix{
 		{ v0.x, v1.x, v2.x },
 		{ v0.y, v1.y, v2.y },
@@ -76,20 +62,41 @@ int main() {
 	auto e1 = edgeMatrix[1];
 	auto e2 = edgeMatrix[2];
 
+	return transpose(mat3{e0, e1, e2});	
+}
+
+int main() {
+	const uvec2 VIEWPORT{640, 480};
+
+	SetConfigFlags(FLAG_MSAA_4X_HINT);
+	InitWindow(VIEWPORT.x, VIEWPORT.y, "software rasterization");
+	SetTargetFPS(60);                           
+
+	const float zNear = 0.1f;
+	const float zFar = 100.0f;
+	vec3 cameraPos{0.0f, 3.75f, 6.5f};
+	vec3 cameraTarget{0.0f, 0.0f, 0.0f};
+	vec3 cameraUp{0.0f, 1.0f, 0.0f};	
+	auto view = lookAt(cameraPos, cameraTarget, cameraUp);
+	auto proj = perspective(glm::radians(45.0f), static_cast<float>(VIEWPORT.x) / static_cast<float>(VIEWPORT.y), zNear, zFar);
+
+	vec3 v0{-0.5f, -0.5f, 1.0f};
+	vec3 v1{0.0f, 0.5f, 1.0f};
+	vec3 v2{0.5f, -0.5f, 1.0f};
+
 	while (!WindowShouldClose()) {
 		BeginDrawing();
 
 		ClearBackground(BLACK);
 
+		auto edges = rasterTriangleSetup(viewportFromNDC(v0, VIEWPORT), viewportFromNDC(v1, VIEWPORT), viewportFromNDC(v2, VIEWPORT));
+
 		for (auto y = 0; y < VIEWPORT.y; ++y) {
 			for (auto x = 0; x < VIEWPORT.x; ++x) {
 				vec3 sample{x + 0.5f, y + 0.5f, 1.0f};
+				auto insides = edges * sample;
 
-				auto inside0 = dot(e0, sample) >= 0.0f;
-				auto inside1 = dot(e1, sample) >= 0.0f;
-				auto inside2 = dot(e2, sample) >= 0.0f;
-
-				if (inside0 && inside1 && inside2) {
+				if (all(greaterThanEqual(insides, vec3(0.0f)))) {
 					DrawPixel(x, y, mkColor({1.0f, 0.0f, 0.0f}));
 				}
 			}
