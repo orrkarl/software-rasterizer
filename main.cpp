@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "converters.h"
+#include "util.h"
 
 using namespace glm;
 
@@ -175,16 +176,6 @@ const std::vector<vec3> g_cubeColors{
 	glm::vec3(1, 1, 0)
 };
 
-void errorCallback(int error, const char* description) {
-    fprintf(stderr, "Error: %s\n", description);
-}
-
-void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-	if (key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE) {
-		glfwSetWindowShouldClose(window, GL_TRUE);
-	}
-}
-
 int main() {
 	const uvec2 VIEWPORT{1280, 720};
 	const float DEPTH_BUFFER_CLEAR = std::numeric_limits<float>::max();
@@ -194,25 +185,11 @@ int main() {
 	std::vector<Color> colorBuffer(VIEWPORT.x * VIEWPORT.y, COLOR_BUFFER_CLEAR);
 	std::chrono::milliseconds frameWait(30);
 
-	if (!glfwInit()) {
+	auto window = setupGlfw(VIEWPORT.x, VIEWPORT.y);
+	if (!window) {
 		std::cerr << "could not init GLFW" << std::endl;
 		return EXIT_FAILURE;
 	}
-	glfwSetErrorCallback(errorCallback);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
-
-	auto window = glfwCreateWindow(VIEWPORT.x, VIEWPORT.y, "software rasterization", nullptr, nullptr);
-	if (!window) {
-		std::cerr << "could not create window" << std::endl;
-		return EXIT_FAILURE;
-	}
-
-	glfwSetKeyCallback(window, keyCallback);
-	glfwMakeContextCurrent(window);
-	glfwSwapInterval(1);
-	glViewport(0, 0, VIEWPORT.x, VIEWPORT.y);
-	glClear(GL_COLOR_BUFFER_BIT);
 
 	const float zNear = 0.1f;
 	const float zFar = 100.0f;
