@@ -6,6 +6,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
+#include <limits>
 #include <thread>
 #include <vector>
 
@@ -79,9 +80,12 @@ void rasterTriangleIndexed(const uvec2& viewport, const std::vector<vec4>& verte
 
 			if (all(greaterThanEqual(insides, vec3(0.0f)))) {
 				auto oneOverW = dot(c, sample);
+				auto w = 1 / oneOverW;
+				auto zOverW = v0.z * sample.x + v1.z * sample.y + v2.z;
+				auto z = zOverW * w;
 				auto bufferIdx = (viewport.y - 1 - y) * viewport.x + x;
-				if (oneOverW >= depthBuffer[bufferIdx]) {
-					depthBuffer[bufferIdx] = oneOverW;
+				if (z <= depthBuffer[bufferIdx]) {
+					depthBuffer[bufferIdx] = z;
 					colorBuffer[bufferIdx] = mkColor(colors[indices[triangleIndex][0] % colors.size()]);
 				}
 			}
@@ -136,7 +140,7 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 
 int main() {
 	const uvec2 VIEWPORT{1280, 720};
-	const float DEPTH_BUFFER_CLEAR = 0.0f;
+	const float DEPTH_BUFFER_CLEAR = std::numeric_limits<float>::max();
 	const Color COLOR_BUFFER_CLEAR = {0, 0, 0, 1};
 	const bool RENDER_ONCE = false;
 	std::vector<float> depthBuffer(VIEWPORT.x * VIEWPORT.y, DEPTH_BUFFER_CLEAR);
