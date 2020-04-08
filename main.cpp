@@ -180,7 +180,7 @@ int main() {
 	const uvec2 VIEWPORT{1280, 720};
 	const float DEPTH_BUFFER_CLEAR = std::numeric_limits<float>::max();
 	const Color COLOR_BUFFER_CLEAR = {0, 0, 0, 1};
-	const bool RENDER_ONCE = true;
+	const bool RENDER_ONCE = false;
 	std::vector<float> depthBuffer(VIEWPORT.x * VIEWPORT.y, DEPTH_BUFFER_CLEAR);
 	std::vector<Color> colorBuffer(VIEWPORT.x * VIEWPORT.y, COLOR_BUFFER_CLEAR);
 	std::chrono::milliseconds frameWait(30);
@@ -222,8 +222,8 @@ int main() {
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 		auto end = std::chrono::high_resolution_clock::now();
-		if ((end - lastFrameLogTime) > std::chrono::seconds(1)) {
-			std::cout << "Frame rendering took " << ((end - start).count()) / 1000000 << "ms" << std::endl;
+		if ((end - lastFrameLogTime) > std::chrono::milliseconds(500)) {
+			std::cout << "Frame rendering took " << ((end - start).count()) / 1000 << "us" << std::endl;
 			lastFrameLogTime = end;
 		}
 		rendered = true;
