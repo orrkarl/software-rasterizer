@@ -1,5 +1,15 @@
 #include "rasterizer.h"
 
+constexpr uint32_t BITS = 1 << 24;
+
+int32_t normalize(float f) {
+	return static_cast<int32_t>(f * BITS);
+}
+
+ivec3 normalize(const vec3& v) {
+	return ivec3{normalize(v.x), normalize(v.y), normalize(v.z)};
+}
+
 void rasterTriangleIndexed(const uvec2& viewport, const std::vector<vec3>& vertecies, const std::vector<vec3>& colors, const std::vector<std::array<uint32_t, 3>>& indices, const VertexShaderUniforms& unif, VertexShader vs, FragmentShader fs, float* depthBuffer, Color* colorBuffer) {
 	std::vector<VertexShaderOutput> transformed(vertecies.size());
 
@@ -9,13 +19,13 @@ void rasterTriangleIndexed(const uvec2& viewport, const std::vector<vec3>& verte
 	}
 
 	for (size_t triangleIndex = 0; triangleIndex < indices.size(); ++triangleIndex) {
-		auto v0Clip = transformed[indices[triangleIndex][0]].gl_Position;
-		auto v1Clip = transformed[indices[triangleIndex][1]].gl_Position;
-		auto v2Clip = transformed[indices[triangleIndex][2]].gl_Position;
-
-		auto v0 = rasterFromNDC(v0Clip, viewport);
-		auto v1 = rasterFromNDC(v1Clip, viewport);
-		auto v2 = rasterFromNDC(v2Clip, viewport);
+		vec4 v0Clip = transformed[indices[triangleIndex][0]].gl_Position;
+		vec4 v1Clip = transformed[indices[triangleIndex][1]].gl_Position;
+		vec4 v2Clip = transformed[indices[triangleIndex][2]].gl_Position;
+		
+		vec4 v0 = rasterFromNDC(v0Clip, viewport);
+		vec4 v1 = rasterFromNDC(v1Clip, viewport);
+		vec4 v2 = rasterFromNDC(v2Clip, viewport);
 
 		mat3 vertexMatrix{
 			{ v0.x, v1.x, v2.x },
@@ -28,21 +38,31 @@ void rasterTriangleIndexed(const uvec2& viewport, const std::vector<vec3>& verte
 			continue; 
 		}
 
-		auto edgeMatrix = inverse(vertexMatrix);
+		mat3 edgeMatrix = inverse(vertexMatrix);
 
-		auto e0 = edgeMatrix[0];
-		auto e1 = edgeMatrix[1];
-		auto e2 = edgeMatrix[2];
-		auto c = edgeMatrix * vec3{1.0f, 1.0f, 1.0f};
-		auto interpolateZ = edgeMatrix * vec3{v0Clip.z, v1Clip.z, v2Clip.z};
+		vec3 e0 = edgeMatrix[0];
+		vec3 e1 = edgeMatrix[1];
+		vec3 e2 = edgeMatrix[2];
+		vec3 c = edgeMatrix * vec3{1.0f, 1.0f, 1.0f};
+		vec3 interpolateZ = edgeMatrix * vec3{v0Clip.z, v1Clip.z, v2Clip.z};
 
-		auto edges = transpose(mat3{e0, e1, e2});	
+		mat3 edges = transpose(mat3{e0, e1, e2});
+
+		using lmat3 = mat<3, 3, int64_t, glm::highp>;
+		using lvec3 = vec<3, int64_t>;
+		auto e0I = normalize(e0);
+		auto e1I = normalize(e1);
+		auto e2I = normalize(e2);
+		lmat3 edgesI = transpose(lmat3{e0I, e1I, e2I});
+
 		for (auto y = 0; y < viewport.y; ++y) {
 			for (auto x = 0; x < viewport.x; ++x) {
-				vec3 sample{x + 0.5f, y + 0.5f, 1.0f};
-				auto insides = edges * sample;
+				ivec3 sampleI{2 * x + 1, 2 * y + 1, 2};
+				lvec3 insidesI = edgesI * sampleI;
 
-				if (all(greaterThanEqual(insides, vec3(0.0f)))) {
+				bool resI = all(greaterThanEqual(insidesI, lvec3(0)));
+				if (resI) {
+					vec3 sample{x + 0.5f, y + 0.5f, 1.0f};
 					auto oneOverW = dot(c, sample);
 					auto w = 1 / oneOverW;
 					auto zOverW = dot(interpolateZ, sample);
@@ -52,6 +72,7 @@ void rasterTriangleIndexed(const uvec2& viewport, const std::vector<vec3>& verte
 					if (z <= depthBuffer[bufferIdx]) {
 						depthBuffer[bufferIdx] = z;
 
+						vec3 insides = edges * sample;
 						auto barysRaw = insides * w;
 						vec3 barys{barysRaw.x, barysRaw.y, 1 - barysRaw.x - barysRaw.y};
 						auto c0 = transformed[indices[triangleIndex][0]].custom.color;

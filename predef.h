@@ -1,5 +1,7 @@
 #pragma once
 
+#define GLM_FORCE_UNRESTRICTED_GENTYPE
+
 #include <algorithm>
 #include <array> 
 #include <chrono>

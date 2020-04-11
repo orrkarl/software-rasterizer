@@ -14,7 +14,7 @@ std::ostream& operator<<(std::ostream& os, const glm::mat4& mat) {
 }
 
 glm::vec4 rasterFromNDC(const glm::vec4& ndc, const glm::uvec2& viewport) {
-	return { (ndc.x + ndc.w) * viewport.x / 2, (ndc.w - ndc.y) * viewport.y / 2, ndc.z, ndc.w };
+	return glm::vec4{ (ndc.x + ndc.w) * viewport.x / 2, (ndc.w - ndc.y) * viewport.y / 2, ndc.z, ndc.w };
 }
 
 Color mkColor(const glm::vec4& color) {

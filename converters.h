@@ -1,7 +1,6 @@
 #pragma once
 
-#include <glm/glm.hpp>
-#include <iostream>
+#include "predef.h"
 
 struct Color {
 	unsigned char r, g, b, a;
