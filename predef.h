@@ -14,9 +14,10 @@
 #include <iomanip>
 #include <limits>
 #include <thread>
+#include <type_traits>
 #include <vector>
 
 using namespace glm;
 
 float sum(const vec3& vec);
- 
+

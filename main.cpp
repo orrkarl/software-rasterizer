@@ -72,7 +72,7 @@ int main() {
 	const uvec2 VIEWPORT{1280, 720};
 	const float DEPTH_BUFFER_CLEAR = std::numeric_limits<float>::max();
 	const Color COLOR_BUFFER_CLEAR = {0, 0, 0, 1};
-	const bool RENDER_ONCE = false;
+	const bool RENDER_ONCE = true;
 	std::vector<float> depthBuffer(VIEWPORT.x * VIEWPORT.y, DEPTH_BUFFER_CLEAR);
 	std::vector<Color> colorBuffer(VIEWPORT.x * VIEWPORT.y, COLOR_BUFFER_CLEAR);
 	std::chrono::milliseconds frameWait(30);
