@@ -68,11 +68,21 @@ const std::vector<vec3> g_cubeColors{
 	glm::vec3(1, 1, 1),
 };
 
-int main() {
+void parseArguments(const std::vector<std::string>& args, bool& renderOnce) {
+	renderOnce = false;
+	for (const auto& arg : args) {
+		if (arg == "-once") {
+			renderOnce = true;
+		}
+	}
+}
+
+int main(int argc, const char** argv) {
 	const uvec2 VIEWPORT{1280, 720};
 	const float DEPTH_BUFFER_CLEAR = std::numeric_limits<float>::max();
 	const Color COLOR_BUFFER_CLEAR = {0, 0, 0, 1};
-	const bool RENDER_ONCE = true;
+	bool renderOnce;
+	parseArguments(std::vector<std::string>(argv, argv + argc), renderOnce);
 	std::vector<float> depthBuffer(VIEWPORT.x * VIEWPORT.y, DEPTH_BUFFER_CLEAR);
 	std::vector<Color> colorBuffer(VIEWPORT.x * VIEWPORT.y, COLOR_BUFFER_CLEAR);
 	std::chrono::milliseconds frameWait(30);
@@ -96,7 +106,7 @@ int main() {
 	auto lastFrameLogTime = std::chrono::high_resolution_clock::now();
 	auto rendered = false;
 	while (!glfwWindowShouldClose(window)) {
-		if (RENDER_ONCE && rendered) {
+		if (renderOnce && rendered) {
 			glfwPollEvents();
 			continue;
 		}

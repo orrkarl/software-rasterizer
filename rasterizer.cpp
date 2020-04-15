@@ -44,6 +44,9 @@ struct TriangleRecord {
 		auto e1I = normalize(e1);
 		auto e2I = normalize(e2);
 		edgesI = transpose(lmat3{e0I, e1I, e2I});
+
+		interpolateWI = normalize(interpolateW);
+		interpolateZI = normalize(interpolateZ);
 	}
 
 	float area;
@@ -51,6 +54,8 @@ struct TriangleRecord {
 	vec3 interpolateZ;
 	mat3 edges;
 	lmat3 edgesI;	 
+	ivec3 interpolateWI;
+	ivec3 interpolateZI;
 };
 
 void rasterTriangleIndexed(const uvec2& viewport, const std::vector<vec3>& vertecies, const std::vector<vec3>& colors, const std::vector<std::array<uint32_t, 3>>& indices, const VertexShaderUniforms& unif, VertexShader vs, FragmentShader fs, float* depthBuffer, Color* colorBuffer) {
@@ -68,7 +73,7 @@ void rasterTriangleIndexed(const uvec2& viewport, const std::vector<vec3>& verte
 
 		TriangleRecord record(v0Clip, v1Clip, v2Clip, viewport);
 		
-		if (record.area  >= 0.0f) {
+		if (record.area >= 0.0f) {
 			// degenerate and back-facing triangles are ignored
 			continue; 
 		}
@@ -79,26 +84,29 @@ void rasterTriangleIndexed(const uvec2& viewport, const std::vector<vec3>& verte
 				lvec3 insidesI = record.edgesI * sampleI;
 
 				if (all(greaterThanEqual(insidesI, lvec3(0)))) {
-					vec3 sample{x + 0.5f, y + 0.5f, 1.0f};
-					auto oneOverW = dot(record.interpolateW, sample);
-					auto w = 1 / oneOverW;
-					auto zOverW = dot(record.interpolateZ, sample);
-					auto z = zOverW * w;
+					auto oneOverWI = record.interpolateWI.x * sampleI.x + record.interpolateWI.y * sampleI.y + record.interpolateWI.z * sampleI.z;
+					auto zOverW = record.interpolateZI.x * sampleI.x + record.interpolateZI.y * sampleI.y + record.interpolateZI.z * sampleI.z;
+					auto z = zOverW / static_cast<float>(oneOverWI);
 
 					auto bufferIdx = (viewport.y - 1 - y) * viewport.x + x;
 
 					if (z <= depthBuffer[bufferIdx]) {
 						depthBuffer[bufferIdx] = z;
 
-						vec3 insides = record.edges * sample;
-						auto barysRaw = insides * w;
+						vec3 barysRaw{
+							insidesI.x / static_cast<float>(oneOverWI),
+							insidesI.y / static_cast<float>(oneOverWI),
+							insidesI.z / static_cast<float>(oneOverWI),
+						};
 						vec3 barys{barysRaw.x, barysRaw.y, 1 - barysRaw.x - barysRaw.y};
 						auto c0 = transformed[indices[triangleIndex][0]].custom.color;
 						auto c1 = transformed[indices[triangleIndex][1]].custom.color;
 						auto c2 = transformed[indices[triangleIndex][2]].custom.color;
 						auto interpColor = c0 * barys.x + c1 * barys.y + c2 * barys.z;
 						VertexShaderCustomOutput newCustom{interpColor};
-						FragmentShaderInput fsInput{newCustom, vec4(sample.x, sample.y, z, oneOverW)};
+						vec3 sample{x + 0.5, y + 0.5f, 1};
+						auto w = dot(record.interpolateW, sample);
+						FragmentShaderInput fsInput{newCustom, vec4(sample.x, sample.y, z, w)};
 						vec4 color;
 						fragmentShader(fsInput, color);
 						colorBuffer[bufferIdx] = mkColor(color);
