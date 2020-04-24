@@ -33,12 +33,11 @@ struct TriangleRecord {
 		mat3 edgeMatrix = inverse(vertexMatrix);
 
 		interpolateW = edgeMatrix * vec3{1.0f, 1.0f, 1.0f};
-		interpolateZ = edgeMatrix * vec3{v0Clip.z, v1Clip.z, v2Clip.z};
+		auto interpolateZ = edgeMatrix * vec3{v0Clip.z, v1Clip.z, v2Clip.z};
 
 		vec3 e0 = edgeMatrix[0];
 		vec3 e1 = edgeMatrix[1];
 		vec3 e2 = edgeMatrix[2];
-		edges = transpose(mat3{e0, e1, e2});
 
 		auto e0I = normalize(e0);
 		auto e1I = normalize(e1);
@@ -51,8 +50,6 @@ struct TriangleRecord {
 
 	float area;
 	vec3 interpolateW;
-	vec3 interpolateZ;
-	mat3 edges;
 	lmat3 edgesI;	 
 	ivec3 interpolateWI;
 	ivec3 interpolateZI;
