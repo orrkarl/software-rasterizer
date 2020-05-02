@@ -63,12 +63,17 @@ void rasterTriangleIndexed(const uvec2& viewport, const std::vector<vec3>& verte
 			transformed[indices[triangleIndex][1]].gl_Position,
 			transformed[indices[triangleIndex][2]].gl_Position
 		};
-		auto triangles = clip(raw);
-
-		for (const auto& current : triangles) {
-			auto v0Clip = current.v0;
-			auto v1Clip = current.v1;
-			auto v2Clip = current.v2;
+		std::array<vec2, 9> coeffs;
+		const auto v0 = raw.v0;
+		const auto d1 = raw.v1 - raw.v0;
+		const auto d2 = raw.v2 - raw.v0;
+		auto vertexCount = clip(raw, coeffs);
+		
+		auto v0Clip = v0 + d1 * coeffs[0].x + d2 * coeffs[0].y;
+		auto v1Clip = v0 + d1 * coeffs[1].x + d2 * coeffs[1].y;
+		for (auto i = 2; i < vertexCount; ++i) {
+			auto v1Clip = v0 + d1 * coeffs[i - 1].x + d2 * coeffs[i - 1].y;
+			auto v2Clip = v0 + d1 * coeffs[i].x + d2 * coeffs[i].y;
 
 			TriangleRecord record(v0Clip, v1Clip, v2Clip, viewport);
 			
@@ -77,6 +82,12 @@ void rasterTriangleIndexed(const uvec2& viewport, const std::vector<vec3>& verte
 				continue; 
 			}
 
+			const auto origC0 = transformed[indices[triangleIndex][0]].custom.color;
+			const auto origC1 = transformed[indices[triangleIndex][1]].custom.color;
+			const auto origC2 = transformed[indices[triangleIndex][2]].custom.color;
+			auto clippedC0 = origC0 + (origC1 - origC0) * coeffs[0].x + (origC2 - origC0) * coeffs[0].y; 
+			auto clippedC1 = origC0 + (origC1 - origC0) * coeffs[i - 1].x + (origC2 - origC0) * coeffs[i - 1].y; 
+			auto clippedC2 = origC0 + (origC1 - origC0) * coeffs[i].x + (origC2 - origC0) * coeffs[i].y; 
 			for (auto y = 0; y < viewport.y; ++y) {
 				for (auto x = 0; x < viewport.x; ++x) {
 					vec3 sample{x + 0.5f, y + 0.5f, 1.0f};
@@ -97,10 +108,7 @@ void rasterTriangleIndexed(const uvec2& viewport, const std::vector<vec3>& verte
 								insides.y / static_cast<float>(oneOverW)
 							};
 							vec3 barys{barysRaw.x, barysRaw.y, 1 - barysRaw.x - barysRaw.y};
-							auto c0 = transformed[indices[triangleIndex][0]].custom.color;
-							auto c1 = transformed[indices[triangleIndex][1]].custom.color;
-							auto c2 = transformed[indices[triangleIndex][2]].custom.color;
-							auto interpColor = c0 * barys.x + c1 * barys.y + c2 * barys.z;
+							auto interpColor = clippedC0 * barys.x + clippedC1 * barys.y + clippedC2 * barys.z;
 							VertexShaderCustomOutput newCustom{interpColor};
 							auto w = dot(record.interpolateW, sample);
 							FragmentShaderInput fsInput{newCustom, vec4(sample.x, sample.y, z, w)};

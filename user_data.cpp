@@ -6,8 +6,8 @@
 #include "util.h"
 
 const std::vector<vec3> g_triangleVertecies{
-    { -0.5f, -0.5f, 0.5f },
-    { 0.5f, -0.5f, 0.5f },
+    { -2.0f, -0.5f, 0.5f },
+    { 2.0f, -0.5f, 0.5f },
     { 0.0f, 0.5f, 0.5f },
 };
  

@@ -6,5 +6,5 @@ struct Triangle {
 	vec4 v0, v1, v2;
 };
 
-std::vector<Triangle> clip(const Triangle& tri);
+size_t clip(const Triangle& tri, std::array<vec2, 9>& coeffs);
 
