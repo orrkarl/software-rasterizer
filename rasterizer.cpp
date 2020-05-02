@@ -53,7 +53,7 @@ void rasterTriangleIndexed(const uvec2& viewport, const std::vector<vec3>& verte
 	std::vector<VertexShaderOutput> transformed(vertecies.size());
 
 	for (size_t i = 0; i < vertecies.size(); ++i) {
-		VertexShaderInput in{&unif, vertecies[i], colors[indices[i][0] % colors.size()]};
+		VertexShaderInput in{&unif, vertecies[i], colors[i]};
 		vs(in, transformed[i]);	
 	}
 

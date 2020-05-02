@@ -5,7 +5,7 @@
 
 #include "user_data.h"
 
-void parseArguments(const std::vector<std::string>& args, bool renderOnce) {
+void parseArguments(const std::vector<std::string>& args, bool& renderOnce) {
 	renderOnce = false;
 	for (const auto& arg : args) {
 		if (arg == "-once") {
