@@ -4,71 +4,8 @@
 #include "util.h"
 
 #include "user_data.h"
-#include "rasterizer.h"
 
-std::vector<mat4> generateRandomTransforms() {
-	std::vector<mat4> objects;
-
-	const mat4 identity(1.f);
- 
-    auto M0 = translate(identity, glm::vec3(0, 0, 2.f));
-    M0 = rotate(M0, glm::radians(45.f), glm::vec3(0, 1, 0));
- 
-    auto M1 = translate(identity, glm::vec3(-3.75f, 0, 0));
-    M1 = rotate(M1, glm::radians(30.f), glm::vec3(1, 0, 0));
- 
-    auto M2 = translate(identity, glm::vec3(3.75f, 0, 0));
-    M2 = rotate(M2, glm::radians(60.f), glm::vec3(0, 1, 0));
- 
-    auto M3 = glm::translate(identity, glm::vec3(0, 0, -2.f));
-    M3 = rotate(M3, glm::radians(90.f), glm::vec3(0, 0, 1));
-
-    objects.push_back(M0);
-    objects.push_back(M1);
-    objects.push_back(M2);
-    objects.push_back(M3);
-
-	return objects;
-}
-
-const std::vector<vec3> g_cubeVertecies{
-    { 1.0f, -1.0f, -1.0f },
-    { 1.0f, -1.0f, 1.0f },
-    { -1.0f, -1.0f, 1.0f },
-    { -1.0f, -1.0f, -1.0f },
-    { 1.0f, 1.0f, -1.0f },
-    {  1.0f, 1.0f, 1.0f },
-    { -1.0f, 1.0f, 1.0f },
-    { -1.0f, 1.0f, -1.0f },
-};
- 
-const std::vector<std::array<uint32_t, 3>> g_cubeIndices{
-    {1, 3, 0}, 
-	{7, 5, 4}, 
-	{4, 1, 0},
-	{5, 2, 1}, 
-	{2, 7, 3}, 
-	{0, 7, 4}, 
-	{1, 2, 3}, 
-	{7, 6, 5}, 
-	{4, 5, 1}, 
-	{5, 6, 2}, 
-	{2, 6, 7}, 
-	{0, 3, 7}
-};
-
-const std::vector<vec3> g_cubeColors{
-	glm::vec3(0, 0, 0),
-	glm::vec3(0, 0, 1),
-	glm::vec3(0, 1, 0),
-	glm::vec3(0, 1, 1),
-	glm::vec3(1, 0, 0),
-	glm::vec3(1, 0, 1),
-	glm::vec3(1, 1, 0),
-	glm::vec3(1, 1, 1),
-};
-
-void parseArguments(const std::vector<std::string>& args, bool& renderOnce) {
+void parseArguments(const std::vector<std::string>& args, bool renderOnce) {
 	renderOnce = false;
 	for (const auto& arg : args) {
 		if (arg == "-once") {
@@ -93,15 +30,7 @@ int main(int argc, const char** argv) {
 		return EXIT_FAILURE;
 	}
 
-	const float zNear = 0.1f;
-	const float zFar = 100.0f;
-	vec3 cameraPos{0.0f, 3.75f, 6.5f};
-	vec3 cameraTarget{0.0f, 0.0f, 0.0f};
-	vec3 cameraUp{0.0f, 1.0f, 0.0f};	
-	auto view = lookAt(cameraPos, cameraTarget, cameraUp);
-	auto proj = perspective(glm::radians(60.0f), static_cast<float>(VIEWPORT.x) / static_cast<float>(VIEWPORT.y), zNear, zFar);
-
-	auto transforms = generateRandomTransforms();
+	init(VIEWPORT);
 	
 	auto lastFrameLogTime = std::chrono::high_resolution_clock::now();
 	auto rendered = false;
@@ -115,10 +44,7 @@ int main(int argc, const char** argv) {
 		std::fill(depthBuffer.begin(), depthBuffer.end(), DEPTH_BUFFER_CLEAR);
 		std::fill(colorBuffer.begin(), colorBuffer.end(), COLOR_BUFFER_CLEAR);
 
-		for (const auto& transform : transforms) {		
-			VertexShaderUniforms unif = {proj * view * transform};
-			rasterTriangleIndexed(VIEWPORT, g_cubeVertecies, g_cubeColors, g_cubeIndices, unif, vertexShader, fragmentShader, depthBuffer.data(), colorBuffer.data());
-		}
+		periodic(VIEWPORT, depthBuffer.data(), colorBuffer.data());
 		glDrawPixels(VIEWPORT.x, VIEWPORT.y, GL_RGBA, GL_UNSIGNED_BYTE, colorBuffer.data());
 
 		glfwSwapBuffers(window);
