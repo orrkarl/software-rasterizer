@@ -1,5 +1,7 @@
 #include "rasterizer.h"
 
+#include "clipping.h"
+
 using lmat3 = mat<3, 3, int64_t, glm::highp>;
 using lvec3 = vec<3, int64_t>;
 
@@ -64,49 +66,58 @@ void rasterTriangleIndexed(const uvec2& viewport, const std::vector<vec3>& verte
 	}
 
 	for (size_t triangleIndex = 0; triangleIndex < indices.size(); ++triangleIndex) {
-		vec4 v0Clip = transformed[indices[triangleIndex][0]].gl_Position;
-		vec4 v1Clip = transformed[indices[triangleIndex][1]].gl_Position;
-		vec4 v2Clip = transformed[indices[triangleIndex][2]].gl_Position;
+		Triangle raw{
+			transformed[indices[triangleIndex][0]].gl_Position,
+			transformed[indices[triangleIndex][1]].gl_Position,
+			transformed[indices[triangleIndex][2]].gl_Position
+		};
+		auto triangles = clip(raw);
 
-		TriangleRecord record(v0Clip, v1Clip, v2Clip, viewport);
-		
-		if (record.area >= 0.0f) {
-			// degenerate and back-facing triangles are ignored
-			continue; 
-		}
+		for (const auto& current : triangles) {
+			auto v0Clip = current.v0;
+			auto v1Clip = current.v1;
+			auto v2Clip = current.v2;
 
-		for (auto y = 0; y < viewport.y; ++y) {
-			for (auto x = 0; x < viewport.x; ++x) {
-				ivec3 sampleI{2 * x + 1, 2 * y + 1, 2};
-				lvec3 insidesI = record.edgesI * sampleI;
+			TriangleRecord record(v0Clip, v1Clip, v2Clip, viewport);
+			
+			if (record.area >= 0.0f) {
+				// degenerate and back-facing triangles are ignored
+				continue; 
+			}
 
-				if (all(greaterThanEqual(insidesI, lvec3(0)))) {
-					auto oneOverWI = record.interpolateWI.x * sampleI.x + record.interpolateWI.y * sampleI.y + record.interpolateWI.z * sampleI.z;
-					auto zOverW = record.interpolateZI.x * sampleI.x + record.interpolateZI.y * sampleI.y + record.interpolateZI.z * sampleI.z;
-					auto z = zOverW / static_cast<float>(oneOverWI);
+			for (auto y = 0; y < viewport.y; ++y) {
+				for (auto x = 0; x < viewport.x; ++x) {
+					ivec3 sampleI{2 * x + 1, 2 * y + 1, 2};
+					lvec3 insidesI = record.edgesI * sampleI;
 
-					auto bufferIdx = (viewport.y - 1 - y) * viewport.x + x;
+					if (all(greaterThanEqual(insidesI, lvec3(0)))) {
+						auto oneOverWI = record.interpolateWI.x * sampleI.x + record.interpolateWI.y * sampleI.y + record.interpolateWI.z * sampleI.z;
+						auto zOverW = record.interpolateZI.x * sampleI.x + record.interpolateZI.y * sampleI.y + record.interpolateZI.z * sampleI.z;
+						auto z = zOverW / static_cast<float>(oneOverWI);
 
-					if (z <= depthBuffer[bufferIdx]) {
-						depthBuffer[bufferIdx] = z;
+						auto bufferIdx = (viewport.y - 1 - y) * viewport.x + x;
 
-						vec3 barysRaw{
-							insidesI.x / static_cast<float>(oneOverWI),
-							insidesI.y / static_cast<float>(oneOverWI),
-							insidesI.z / static_cast<float>(oneOverWI),
-						};
-						vec3 barys{barysRaw.x, barysRaw.y, 1 - barysRaw.x - barysRaw.y};
-						auto c0 = transformed[indices[triangleIndex][0]].custom.color;
-						auto c1 = transformed[indices[triangleIndex][1]].custom.color;
-						auto c2 = transformed[indices[triangleIndex][2]].custom.color;
-						auto interpColor = c0 * barys.x + c1 * barys.y + c2 * barys.z;
-						VertexShaderCustomOutput newCustom{interpColor};
-						vec3 sample{x + 0.5, y + 0.5f, 1};
-						auto w = dot(record.interpolateW, sample);
-						FragmentShaderInput fsInput{newCustom, vec4(sample.x, sample.y, z, w)};
-						vec4 color;
-						fragmentShader(fsInput, color);
-						colorBuffer[bufferIdx] = mkColor(color);
+						if (z <= depthBuffer[bufferIdx]) {
+							depthBuffer[bufferIdx] = z;
+
+							vec3 barysRaw{
+								insidesI.x / static_cast<float>(oneOverWI),
+								insidesI.y / static_cast<float>(oneOverWI),
+								insidesI.z / static_cast<float>(oneOverWI),
+							};
+							vec3 barys{barysRaw.x, barysRaw.y, 1 - barysRaw.x - barysRaw.y};
+							auto c0 = transformed[indices[triangleIndex][0]].custom.color;
+							auto c1 = transformed[indices[triangleIndex][1]].custom.color;
+							auto c2 = transformed[indices[triangleIndex][2]].custom.color;
+							auto interpColor = c0 * barys.x + c1 * barys.y + c2 * barys.z;
+							VertexShaderCustomOutput newCustom{interpColor};
+							vec3 sample{x + 0.5, y + 0.5f, 1};
+							auto w = dot(record.interpolateW, sample);
+							FragmentShaderInput fsInput{newCustom, vec4(sample.x, sample.y, z, w)};
+							vec4 color;
+							fragmentShader(fsInput, color);
+							colorBuffer[bufferIdx] = mkColor(color);
+						}
 					}
 				}
 			}

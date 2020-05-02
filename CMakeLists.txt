@@ -5,6 +5,8 @@ find_package(OpenGL REQUIRED)
 find_package(glfw3 REQUIRED)
 find_package(glm REQUIRED)
 
-add_executable(raster main.cpp converters.cpp util.cpp rasterizer.cpp user_data.cpp)
+SET(SRCS main.cpp converters.cpp util.cpp rasterizer.cpp user_data.cpp clipping.cpp)
+
+add_executable(raster ${SRCS})
 target_link_libraries(raster OpenGL::GL glfw glm)
 
