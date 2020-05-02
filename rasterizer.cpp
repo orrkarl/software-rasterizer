@@ -35,26 +35,18 @@ struct TriangleRecord {
 		mat3 edgeMatrix = inverse(vertexMatrix);
 
 		interpolateW = edgeMatrix * vec3{1.0f, 1.0f, 1.0f};
-		auto interpolateZ = edgeMatrix * vec3{v0Clip.z, v1Clip.z, v2Clip.z};
+		interpolateZ = edgeMatrix * vec3{v0Clip.z, v1Clip.z, v2Clip.z};
 
 		vec3 e0 = edgeMatrix[0];
 		vec3 e1 = edgeMatrix[1];
 		vec3 e2 = edgeMatrix[2];
-
-		auto e0I = normalize(e0);
-		auto e1I = normalize(e1);
-		auto e2I = normalize(e2);
-		edgesI = transpose(lmat3{e0I, e1I, e2I});
-
-		interpolateWI = normalize(interpolateW);
-		interpolateZI = normalize(interpolateZ);
+		edges = transpose(mat3{e0, e1, e2});
 	}
 
 	float area;
 	vec3 interpolateW;
-	lmat3 edgesI;	 
-	ivec3 interpolateWI;
-	ivec3 interpolateZI;
+	mat3 edges;	 
+	vec3 interpolateZ;
 };
 
 void rasterTriangleIndexed(const uvec2& viewport, const std::vector<vec3>& vertecies, const std::vector<vec3>& colors, const std::vector<std::array<uint32_t, 3>>& indices, const VertexShaderUniforms& unif, VertexShader vs, FragmentShader fs, float* depthBuffer, Color* colorBuffer) {
@@ -87,23 +79,22 @@ void rasterTriangleIndexed(const uvec2& viewport, const std::vector<vec3>& verte
 
 			for (auto y = 0; y < viewport.y; ++y) {
 				for (auto x = 0; x < viewport.x; ++x) {
-					ivec3 sampleI{2 * x + 1, 2 * y + 1, 2};
-					lvec3 insidesI = record.edgesI * sampleI;
+					vec3 sample{x + 0.5f, y + 0.5f, 1.0f};
+					vec3 insides = record.edges * sample;
 
-					if (all(greaterThanEqual(insidesI, lvec3(0)))) {
-						auto oneOverWI = record.interpolateWI.x * sampleI.x + record.interpolateWI.y * sampleI.y + record.interpolateWI.z * sampleI.z;
-						auto zOverW = record.interpolateZI.x * sampleI.x + record.interpolateZI.y * sampleI.y + record.interpolateZI.z * sampleI.z;
-						auto z = zOverW / static_cast<float>(oneOverWI);
+					if (all(greaterThanEqual(insides, vec3(0)))) {
+						auto oneOverW = record.interpolateW.x * sample.x + record.interpolateW.y * sample.y + record.interpolateW.z * sample.z;
+						auto zOverW = record.interpolateZ.x * sample.x + record.interpolateZ.y * sample.y + record.interpolateZ.z * sample.z;
+						auto z = zOverW / static_cast<float>(oneOverW);
 
 						auto bufferIdx = (viewport.y - 1 - y) * viewport.x + x;
 
 						if (z <= depthBuffer[bufferIdx]) {
 							depthBuffer[bufferIdx] = z;
 
-							vec3 barysRaw{
-								insidesI.x / static_cast<float>(oneOverWI),
-								insidesI.y / static_cast<float>(oneOverWI),
-								insidesI.z / static_cast<float>(oneOverWI),
+							vec2 barysRaw{
+								insides.x / static_cast<float>(oneOverW),
+								insides.y / static_cast<float>(oneOverW)
 							};
 							vec3 barys{barysRaw.x, barysRaw.y, 1 - barysRaw.x - barysRaw.y};
 							auto c0 = transformed[indices[triangleIndex][0]].custom.color;
@@ -111,7 +102,6 @@ void rasterTriangleIndexed(const uvec2& viewport, const std::vector<vec3>& verte
 							auto c2 = transformed[indices[triangleIndex][2]].custom.color;
 							auto interpColor = c0 * barys.x + c1 * barys.y + c2 * barys.z;
 							VertexShaderCustomOutput newCustom{interpColor};
-							vec3 sample{x + 0.5, y + 0.5f, 1};
 							auto w = dot(record.interpolateW, sample);
 							FragmentShaderInput fsInput{newCustom, vec4(sample.x, sample.y, z, w)};
 							vec4 color;
