@@ -3,7 +3,6 @@
 #include "predef.h"
 
 struct VertexShaderUniforms {
-	mat4 mvp;
 };
 
 struct VertexShaderInput {
