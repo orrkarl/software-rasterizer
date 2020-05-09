@@ -3,7 +3,7 @@
 #include <iomanip>
 
 glm::vec4 rasterFromNDC(const glm::vec4& ndc, const glm::uvec2& viewport) {
-	return glm::vec4{ (ndc.x + ndc.w) * viewport.x / 2, (ndc.w - ndc.y) * viewport.y / 2, ndc.z, ndc.w };
+	return glm::vec4{ (1 + ndc.x / ndc.w) * viewport.x / 2, (1 - ndc.y / ndc.w) * viewport.y / 2, ndc.z / ndc.w, ndc.w };
 }
 
 Color mkColor(const glm::vec4& color) {

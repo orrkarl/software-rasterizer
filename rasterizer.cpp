@@ -24,7 +24,7 @@ struct TriangleRecord {
 		mat3 vertexMatrix{
 			{ v0.x, v1.x, v2.x },
 			{ v0.y, v1.y, v2.y },
-			{ v0.w, v1.w, v2.w }
+			{ 1, 1, 1 }
 		};
 		area = determinant(vertexMatrix);
 
