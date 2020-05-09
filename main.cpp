@@ -5,6 +5,9 @@
 
 #include "user_data.h"
 
+void init(const uvec2& viewport);
+void periodic(GLFWwindow* window, const uvec2& viewport, float* depthBuffer, Color* colorBuffer);
+
 void parseArguments(const std::vector<std::string>& args, bool& renderOnce) {
 	renderOnce = false;
 	for (const auto& arg : args) {
@@ -44,7 +47,7 @@ int main(int argc, const char** argv) {
 		std::fill(depthBuffer.begin(), depthBuffer.end(), DEPTH_BUFFER_CLEAR);
 		std::fill(colorBuffer.begin(), colorBuffer.end(), COLOR_BUFFER_CLEAR);
 
-		periodic(VIEWPORT, depthBuffer.data(), colorBuffer.data());
+		periodic(window, VIEWPORT, depthBuffer.data(), colorBuffer.data());
 		glDrawPixels(VIEWPORT.x, VIEWPORT.y, GL_RGBA, GL_UNSIGNED_BYTE, colorBuffer.data());
 
 		glfwSwapBuffers(window);
