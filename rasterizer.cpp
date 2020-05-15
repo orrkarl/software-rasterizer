@@ -52,13 +52,7 @@ struct TriangleRecord {
 			return; 
 		}
 
-		lmat3 edgeMatrix = adjoint(vertexMatrix);
-
-		auto e0 = edgeMatrix[0];
-		auto e1 = edgeMatrix[1];
-		auto e2 = edgeMatrix[2];
-		edges = transpose(mat3{e0, e1, e2});
-
+		edges = transpose(adjoint(vertexMatrix));
 		interpolatedZ = u32vec3{normalizeDepth(v0Clip), normalizeDepth(v1Clip), normalizeDepth(v2Clip)}; 
 	}
 
