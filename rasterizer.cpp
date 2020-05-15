@@ -2,51 +2,69 @@
 
 #include "clipping.h"
 
+template <typename T, glm::qualifier Q>
+mat<3, 3, T, Q> adjoint(mat<3, 3, T, Q> const& m)
+{
+	mat<3, 3, T, Q> ret;
+
+	ret[0][0] = + (m[1][1] * m[2][2] - m[2][1] * m[1][2]);
+	ret[1][0] = - (m[1][0] * m[2][2] - m[2][0] * m[1][2]);
+	ret[2][0] = + (m[1][0] * m[2][1] - m[2][0] * m[1][1]);
+	ret[0][1] = - (m[0][1] * m[2][2] - m[2][1] * m[0][2]);
+	ret[1][1] = + (m[0][0] * m[2][2] - m[2][0] * m[0][2]);
+	ret[2][1] = - (m[0][0] * m[2][1] - m[2][0] * m[0][1]);
+	ret[0][2] = + (m[0][1] * m[1][2] - m[1][1] * m[0][2]);
+	ret[1][2] = - (m[0][0] * m[1][2] - m[1][0] * m[0][2]);
+	ret[2][2] = + (m[0][0] * m[1][1] - m[1][0] * m[0][1]);
+
+	return ret;
+}
+
 using lmat3 = mat<3, 3, int64_t, glm::highp>;
 using lvec3 = vec<3, int64_t>;
 
-constexpr uint32_t BITS = 1 << 24;
+constexpr auto SUBPIXEL = 1 << 4;
 
-int32_t normalize(float f) {
-	return static_cast<int32_t>(f * BITS);
+u16vec2 rasterFromNDC(const vec4& clip, const vec2& viewport) {
+	auto shiftedNdcX = 1 + clip.x / clip.w;
+	auto shiftedNdcY = 1 - clip.y / clip.w;
+	return {shiftedNdcX * viewport.x / 2, shiftedNdcY * viewport.y / 2};
 }
 
-ivec3 normalize(const vec3& v) {
-	return ivec3{normalize(v.x), normalize(v.y), normalize(v.z)};
+u32 normalizeDepth(const vec4& v) {
+	return (1 + v.z / v.w) * std::numeric_limits<u32>::max() / 2;
 }
 
 struct TriangleRecord {
 	TriangleRecord(const vec4& v0Clip, const vec4& v1Clip, const vec4& v2Clip, const uvec2& viewport) {
-		vec4 v0 = rasterFromNDC(v0Clip, viewport);
-		vec4 v1 = rasterFromNDC(v1Clip, viewport);
-		vec4 v2 = rasterFromNDC(v2Clip, viewport);
+		auto v0 = rasterFromNDC(v0Clip, viewport);
+		auto v1 = rasterFromNDC(v1Clip, viewport);
+		auto v2 = rasterFromNDC(v2Clip, viewport);
 
-		mat3 vertexMatrix{
+		lmat3 vertexMatrix{
 			{ v0.x, v1.x, v2.x },
 			{ v0.y, v1.y, v2.y },
 			{ 1, 1, 1 }
 		};
 		area = determinant(vertexMatrix);
 
-		if (area >= 0.0f) { 
+		if (area >= 0) { 
 			return; 
 		}
 
-		mat3 edgeMatrix = inverse(vertexMatrix);
+		lmat3 edgeMatrix = adjoint(vertexMatrix);
 
-		interpolateW = edgeMatrix * vec3{1.0f, 1.0f, 1.0f};
-		interpolateZ = edgeMatrix * vec3{v0Clip.z, v1Clip.z, v2Clip.z};
-
-		vec3 e0 = edgeMatrix[0];
-		vec3 e1 = edgeMatrix[1];
-		vec3 e2 = edgeMatrix[2];
+		auto e0 = edgeMatrix[0];
+		auto e1 = edgeMatrix[1];
+		auto e2 = edgeMatrix[2];
 		edges = transpose(mat3{e0, e1, e2});
+
+		interpolatedZ = u32vec3{normalizeDepth(v0Clip), normalizeDepth(v1Clip), normalizeDepth(v2Clip)}; 
 	}
 
-	float area;
-	vec3 interpolateW;
-	mat3 edges;	 
-	vec3 interpolateZ;
+	i32 area;
+	lmat3 edges;	 
+	u32vec3 interpolatedZ;
 };
 
 void rasterTriangleIndexed(const uvec2& viewport, const std::vector<vec3>& vertecies, const std::vector<vec3>& colors, const std::vector<std::array<uint32_t, 3>>& indices, const VertexShaderUniforms& unif, VertexShader vs, FragmentShader fs, float* depthBuffer, Color* colorBuffer) {
@@ -77,7 +95,7 @@ void rasterTriangleIndexed(const uvec2& viewport, const std::vector<vec3>& verte
 
 			TriangleRecord record(v0Clip, v1Clip, v2Clip, viewport);
 			
-			if (record.area >= 0.0f) {
+			if (record.area >= 0) {
 				// degenerate and back-facing triangles are ignored
 				continue; 
 			}
@@ -88,30 +106,28 @@ void rasterTriangleIndexed(const uvec2& viewport, const std::vector<vec3>& verte
 			auto clippedC0 = origC0 + (origC1 - origC0) * coeffs[0].x + (origC2 - origC0) * coeffs[0].y; 
 			auto clippedC1 = origC0 + (origC1 - origC0) * coeffs[i - 1].x + (origC2 - origC0) * coeffs[i - 1].y; 
 			auto clippedC2 = origC0 + (origC1 - origC0) * coeffs[i].x + (origC2 - origC0) * coeffs[i].y; 
+
 			for (auto y = 0; y < viewport.y; ++y) {
 				for (auto x = 0; x < viewport.x; ++x) {
-					vec3 sample{x + 0.5f, y + 0.5f, 1.0f};
-					vec3 insides = record.edges * sample;
+					auto sample = SUBPIXEL * ivec3(2 * x + 1, 2 * y + 1, 2);
+					auto insides = record.edges * sample;
+					i64 areaSign = sign(record.area);
 
-					if (all(greaterThanEqual(insides, vec3(0)))) {
-						auto oneOverW = record.interpolateW.x * sample.x + record.interpolateW.y * sample.y + record.interpolateW.z * sample.z;
-						auto zOverW = record.interpolateZ.x * sample.x + record.interpolateZ.y * sample.y + record.interpolateZ.z * sample.z;
-						auto z = zOverW / static_cast<float>(oneOverW);
-
+					if (all(greaterThanEqual(areaSign * insides, lvec3(0)))) {
 						auto bufferIdx = (viewport.y - 1 - y) * viewport.x + x;
+						auto insidesNormalize = 1 / static_cast<float>(static_cast<i64>(record.area) * SUBPIXEL * 2);
+
+						vec2 barysRaw(insides.x * insidesNormalize, insides.y * insidesNormalize);
+						vec3 barys(barysRaw.x, barysRaw.y, 1 - barysRaw.x - barysRaw.y);
+
+						auto z = barys.x * record.interpolatedZ.x + barys.y * record.interpolatedZ.y + barys.z * record.interpolatedZ.z;
 
 						if (z <= depthBuffer[bufferIdx]) {
 							depthBuffer[bufferIdx] = z;
 
-							vec2 barysRaw{
-								insides.x / static_cast<float>(oneOverW),
-								insides.y / static_cast<float>(oneOverW)
-							};
-							vec3 barys{barysRaw.x, barysRaw.y, 1 - barysRaw.x - barysRaw.y};
 							auto interpColor = clippedC0 * barys.x + clippedC1 * barys.y + clippedC2 * barys.z;
 							VertexShaderCustomOutput newCustom{interpColor};
-							auto w = dot(record.interpolateW, sample);
-							FragmentShaderInput fsInput{newCustom, vec4(sample.x, sample.y, z, w)};
+							FragmentShaderInput fsInput{newCustom, vec4(sample.x, sample.y, z / std::numeric_limits<u32>::max(), 1)};
 							vec4 color;
 							fragmentShader(fsInput, color);
 							colorBuffer[bufferIdx] = mkColor(color);

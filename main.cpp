@@ -48,17 +48,18 @@ int main(int argc, const char** argv) {
 		std::fill(colorBuffer.begin(), colorBuffer.end(), COLOR_BUFFER_CLEAR);
 
 		periodic(window, VIEWPORT, depthBuffer.data(), colorBuffer.data());
-		glDrawPixels(VIEWPORT.x, VIEWPORT.y, GL_RGBA, GL_UNSIGNED_BYTE, colorBuffer.data());
-
-		glfwSwapBuffers(window);
-		glfwPollEvents();
 		auto end = std::chrono::high_resolution_clock::now();
 		if ((end - lastFrameLogTime) > std::chrono::milliseconds(500)) {
 			std::cout << "Frame rendering took " << ((end - start).count()) / 1000 << "us" << std::endl;
 			lastFrameLogTime = end;
 		}
+
+		glDrawPixels(VIEWPORT.x, VIEWPORT.y, GL_RGBA, GL_UNSIGNED_BYTE, colorBuffer.data());
+
+		glfwSwapBuffers(window);
+		glfwPollEvents();
+
 		rendered = true;
-		std::this_thread::sleep_for(frameWait);		
 	}
 
 	glfwDestroyWindow(window);

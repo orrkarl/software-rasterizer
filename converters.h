@@ -2,9 +2,7 @@
 
 #include "predef.h"
 
-struct Color {
-	unsigned char r, g, b, a;
-};
+using Color = glm::u8vec4;
 
 template <int D, class T, glm::qualifier Q>
 inline std::ostream& operator<<(std::ostream& os, const glm::vec<D, T, Q>& vec) {
@@ -28,8 +26,6 @@ inline std::ostream& operator<<(std::ostream& os, const glm::mat<M, N, T, Q>& ma
 	return os << "}";
 }
 
-
-glm::vec4 rasterFromNDC(const glm::vec4& ndc, const glm::uvec2& viewport); 
 
 Color mkColor(const glm::vec4& color); 
 
