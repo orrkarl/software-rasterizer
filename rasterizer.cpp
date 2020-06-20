@@ -21,6 +21,7 @@ mat<3, 3, T, Q> adjoint(mat<3, 3, T, Q> const& m)
 }
 
 using lmat3 = mat<3, 3, int64_t, glm::highp>;
+using imat3 = mat<3, 3, int32_t, glm::highp>;
 using lvec3 = vec<3, int64_t>;
 
 constexpr auto SUBPIXEL = 1 << 4;
@@ -41,7 +42,7 @@ struct TriangleRecord {
 		auto v1 = rasterFromNDC(v1Clip, viewport);
 		auto v2 = rasterFromNDC(v2Clip, viewport);
 
-		lmat3 vertexMatrix{
+		imat3 vertexMatrix{
 			{ v0.x, v1.x, v2.x },
 			{ v0.y, v1.y, v2.y },
 			{ 1, 1, 1 }
@@ -58,7 +59,7 @@ struct TriangleRecord {
 	}
 
 	i32 area;
-	lmat3 edges;	 
+	imat3 edges;	 
 	vec3 interpolatedZ;
 	vec3 oneOverW;
 };
@@ -110,9 +111,8 @@ void rasterTriangleIndexed(const uvec2& viewport, const std::vector<vec3>& verte
 				for (auto x = 0; x < viewport.x; ++x) {
 					auto sample = SUBPIXEL * ivec3(2 * x + 1, 2 * y + 1, 2);
 					auto insides = record.edges * sample;
-					i64 areaSign = sign(record.area);
 
-					if (all(greaterThanEqual(areaSign * insides, lvec3(0)))) {
+					if (all(lessThanEqual(insides, ivec3(0)))) {
 						auto bufferIdx = (viewport.y - 1 - y) * viewport.x + x;
 						auto insidesNormalize = 1 / static_cast<float>(static_cast<i64>(record.area) * SUBPIXEL * 2);
 
