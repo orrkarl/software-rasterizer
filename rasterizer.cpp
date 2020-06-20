@@ -31,8 +31,8 @@ u16vec2 rasterFromNDC(const vec4& clip, const vec2& viewport) {
 	return {shiftedNdcX * viewport.x / 2, shiftedNdcY * viewport.y / 2};
 }
 
-u32 normalizeDepth(const vec4& v) {
-	return (1 + v.z / v.w) * std::numeric_limits<u32>::max() / 2;
+float normalizeDepth(const vec4& v) {
+	return (1 + v.z / v.w) * 0.5f;
 }
 
 struct TriangleRecord {
@@ -53,27 +53,30 @@ struct TriangleRecord {
 		}
 
 		edges = transpose(adjoint(vertexMatrix));
-		interpolatedZ = u32vec3{normalizeDepth(v0Clip), normalizeDepth(v1Clip), normalizeDepth(v2Clip)}; 
+		interpolatedZ = {normalizeDepth(v0Clip), normalizeDepth(v1Clip), normalizeDepth(v2Clip)}; 
+		oneOverW = 1.0f / vec3{ v0Clip.w, v1Clip.w, v2Clip.w };
 	}
 
 	i32 area;
 	lmat3 edges;	 
-	u32vec3 interpolatedZ;
+	vec3 interpolatedZ;
+	vec3 oneOverW;
 };
 
-void rasterTriangleIndexed(const uvec2& viewport, const std::vector<vec3>& vertecies, const std::vector<vec3>& colors, const std::vector<std::array<uint32_t, 3>>& indices, const VertexShaderUniforms& unif, VertexShader vs, FragmentShader fs, float* depthBuffer, Color* colorBuffer) {
-	std::vector<VertexShaderOutput> transformed(vertecies.size());
+void rasterTriangleIndexed(const uvec2& viewport, const std::vector<vec3>& vertecies, const std::vector<vec3>& colors, const std::vector<std::array<uint32_t, 3>>& indices, const mat4& mvp, float* depthBuffer, Color* colorBuffer) {
+	std::vector<vec4> transformedVertecies(vertecies.size());
+	std::vector<vec4> transformedColors(vertecies.size());
 
 	for (size_t i = 0; i < vertecies.size(); ++i) {
-		VertexShaderInput in{&unif, vertecies[i], colors[i]};
-		vs(in, transformed[i]);	
+		transformedVertecies[i] = mvp * vec4(vertecies[i], 1.0f);
+		transformedColors[i] = vec4(colors[i], 1.0f);		
 	}
 
 	for (size_t triangleIndex = 0; triangleIndex < indices.size(); ++triangleIndex) {
 		Triangle raw{
-			transformed[indices[triangleIndex][0]].gl_Position,
-			transformed[indices[triangleIndex][1]].gl_Position,
-			transformed[indices[triangleIndex][2]].gl_Position
+			transformedVertecies[indices[triangleIndex][0]],
+			transformedVertecies[indices[triangleIndex][1]],
+			transformedVertecies[indices[triangleIndex][2]]
 		};
 		std::array<vec2, 9> coeffs;
 		const auto v0 = raw.v0;
@@ -94,12 +97,14 @@ void rasterTriangleIndexed(const uvec2& viewport, const std::vector<vec3>& verte
 				continue; 
 			}
 
-			const auto origC0 = transformed[indices[triangleIndex][0]].custom.color;
-			const auto origC1 = transformed[indices[triangleIndex][1]].custom.color;
-			const auto origC2 = transformed[indices[triangleIndex][2]].custom.color;
-			auto clippedC0 = origC0 + (origC1 - origC0) * coeffs[0].x + (origC2 - origC0) * coeffs[0].y; 
-			auto clippedC1 = origC0 + (origC1 - origC0) * coeffs[i - 1].x + (origC2 - origC0) * coeffs[i - 1].y; 
-			auto clippedC2 = origC0 + (origC1 - origC0) * coeffs[i].x + (origC2 - origC0) * coeffs[i].y; 
+			const auto origC0 = transformedColors[indices[triangleIndex][0]];
+			const auto origC1 = transformedColors[indices[triangleIndex][1]];
+			const auto origC2 = transformedColors[indices[triangleIndex][2]];
+			const glm::mat3x4 clippedColor{
+				origC0 + (origC1 - origC0) * coeffs[0].x + (origC2 - origC0) * coeffs[0].y,
+				origC0 + (origC1 - origC0) * coeffs[i - 1].x + (origC2 - origC0) * coeffs[i - 1].y,
+				origC0 + (origC1 - origC0) * coeffs[i].x + (origC2 - origC0) * coeffs[i].y
+			};
 
 			for (auto y = 0; y < viewport.y; ++y) {
 				for (auto x = 0; x < viewport.x; ++x) {
@@ -114,16 +119,13 @@ void rasterTriangleIndexed(const uvec2& viewport, const std::vector<vec3>& verte
 						vec2 barysRaw(insides.x * insidesNormalize, insides.y * insidesNormalize);
 						vec3 barys(barysRaw.x, barysRaw.y, 1 - barysRaw.x - barysRaw.y);
 
-						auto z = barys.x * record.interpolatedZ.x + barys.y * record.interpolatedZ.y + barys.z * record.interpolatedZ.z;
+						auto z = dot(barys, record.interpolatedZ);
 
 						if (z <= depthBuffer[bufferIdx]) {
 							depthBuffer[bufferIdx] = z;
 
-							auto interpColor = clippedC0 * barys.x + clippedC1 * barys.y + clippedC2 * barys.z;
-							VertexShaderCustomOutput newCustom{interpColor};
-							FragmentShaderInput fsInput{newCustom, vec4(sample.x, sample.y, z / std::numeric_limits<u32>::max(), 1)};
-							vec4 color;
-							fragmentShader(fsInput, color);
+							auto interpColor = clippedColor * (record.oneOverW * barys) / dot(record.oneOverW, barys); 
+							vec4 color = interpColor;
 							colorBuffer[bufferIdx] = mkColor(color);
 						}
 					}

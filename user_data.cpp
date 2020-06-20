@@ -1,7 +1,6 @@
 #include "user_data.h"
 
 #include "converters.h"
-#include "shaders.h"
 #include "rasterizer.h"
 #include "util.h"
 
@@ -92,8 +91,8 @@ void periodic(GLFWwindow* window, const uvec2& viewport, float* depthBuffer, Col
 	}
 	g_view = lookAt(g_cameraPos, g_cameraTarget, g_cameraUp);
 	for (const auto& transform : g_transforms) {		
-		VertexShaderUniforms unif = {g_proj * g_view * transform};
-		rasterTriangleIndexed(viewport, g_cubeVertecies, g_cubeColors, g_cubeIndices, unif, vertexShader, fragmentShader, depthBuffer, colorBuffer);
+		auto mvp = g_proj * g_view * transform;
+		rasterTriangleIndexed(viewport, g_cubeVertecies, g_cubeColors, g_cubeIndices, mvp, depthBuffer, colorBuffer);
 	}
 }
 
