@@ -4,6 +4,12 @@
 #include "rasterizer.h"
 #include "util.h"
 
+struct FixedColorShader : MiniFragmentShader<vec3, FixedColorShader> {
+	static vec4 shade(vec3 data) {
+		return {data, 1.0f};
+	}
+};
+
 std::vector<mat4> generateRandomTransforms() {
 	std::vector<mat4> objects;
 
@@ -92,7 +98,14 @@ void periodic(GLFWwindow* window, const uvec2& viewport, float* depthBuffer, Col
 	g_view = lookAt(g_cameraPos, g_cameraTarget, g_cameraUp);
 	for (const auto& transform : g_transforms) {		
 		auto mvp = g_proj * g_view * transform;
-		rasterTriangleIndexed(viewport, g_cubeVertecies, g_cubeColors, g_cubeIndices, mvp, depthBuffer, colorBuffer);
+		rasterTriangleIndexed<FixedColorShader>(
+			viewport, 
+			g_cubeVertecies, 
+			g_cubeColors, 
+			g_cubeIndices, 
+			mvp, 
+			depthBuffer, 
+			colorBuffer);
 	}
 }
 

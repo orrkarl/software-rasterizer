@@ -9,9 +9,9 @@ SET(SRCS
 	main.cpp 
 	converters.cpp 
 	util.cpp 
-	rasterizer.cpp 
 	user_data.cpp 
 	clipping.cpp
+	RasterUtil.cpp
 	stb_image.c)
 
 add_executable(raster ${SRCS})
