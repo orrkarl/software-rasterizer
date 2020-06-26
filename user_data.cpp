@@ -5,7 +5,7 @@
 #include "util.h"
 
 struct FixedColorShader : MiniFragmentShader<vec3, FixedColorShader> {
-	static vec4 shade(vec3 data) {
+	vec4 shade(vec3 data) {
 		return {data, 1.0f};
 	}
 };
@@ -104,6 +104,7 @@ void periodic(GLFWwindow* window, const uvec2& viewport, float* depthBuffer, Col
 			g_cubeColors, 
 			g_cubeIndices, 
 			mvp, 
+			FixedColorShader(),
 			depthBuffer, 
 			colorBuffer);
 	}

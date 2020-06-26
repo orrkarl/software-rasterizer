@@ -8,6 +8,7 @@ void rasterTriangleIndexed(
 	const std::vector<typename FragmentShader::Input>& colors, 
 	const std::vector<std::array<uint32_t, 3>>& indices, 
 	const mat4& mvp, 
+	FragmentShader fs,
 	float* depthBuffer, 
 	Color* colorBuffer) {
 	std::vector<vec4> transformedVertecies(vertecies.size());
@@ -68,7 +69,7 @@ void rasterTriangleIndexed(
 							depthBuffer[bufferIdx] = z;
 
 							auto interpolatedData = clippedColor * (record.oneOverW * barys) / dot(record.oneOverW, barys);
-							auto resultColor = FragmentShader::shade(interpolatedData); 
+							auto resultColor = fs.shade(interpolatedData); 
 							colorBuffer[bufferIdx] = mkColor(resultColor);
 						}
 					}

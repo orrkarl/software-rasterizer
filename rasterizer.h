@@ -12,8 +12,8 @@ struct MiniFragmentShader {
 	using Input = T;
 	static constexpr auto InputDimension = DetermineDimensionValue<T>;
 	
-	static vec4 shade(T data) {
-		return Impl::shade(data);
+	vec4 shade(T data) {
+		return static_cast<Impl*>(this).shade(data);
 	}
 };
 
@@ -24,6 +24,7 @@ void rasterTriangleIndexed(
 	const std::vector<typename FragmentShader::Input>& colors, 
 	const std::vector<std::array<uint32_t, 3>>& indices, 
 	const mat4& mvp, 
+	FragmentShader fs,
 	float* depthBuffer, 
 	Color* colorBuffer);
 
