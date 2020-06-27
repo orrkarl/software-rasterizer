@@ -11,7 +11,6 @@ SET(SRCS
 	util.cpp 
 	user_data.cpp 
 	clipping.cpp
-	RasterUtil.cpp
 	stb_image.c)
 
 add_executable(raster ${SRCS})

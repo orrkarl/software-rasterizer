@@ -13,7 +13,7 @@ struct MiniFragmentShader {
 	static constexpr auto InputDimension = DetermineDimensionValue<T>;
 	
 	vec4 shade(T data) {
-		return static_cast<Impl*>(this).shade(data);
+		return static_cast<Impl*>(this)->shade(data);
 	}
 };
 
