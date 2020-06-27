@@ -3,6 +3,7 @@
 #include <map>
 #include <memory>
 #include <stb/stb_image.h>
+#include <stdexcept>
 #include <tinyobjloader/tiny_obj_loader.h>
 
 #include "converters.h"
@@ -16,6 +17,25 @@ float frac(float x) {
 	float tmp = x - static_cast<i64>(x);
 	return tmp >= 0.0f ? tmp : 1.0f - tmp;
 }
+
+struct Mesh {
+	uint32_t baseIndex;
+	uint32_t indexCount;
+	std::string texName;
+};
+
+struct SortedVertex {
+	i32 positionIdx;
+	i32 texCoordIdx;
+
+	bool operator<(const SortedVertex& other) const {
+		if (positionIdx < other.positionIdx) {
+			return true;
+		}
+
+		return texCoordIdx < other.texCoordIdx; 
+	}
+};
 
 struct Texture {
 	std::unique_ptr<stbi_uc> buffer;
@@ -48,6 +68,7 @@ struct Texture2DSamplerShader : MiniFragmentShader<vec2, Texture2DSamplerShader>
 std::vector<vec3> g_vertecies;
 std::vector<vec2> g_texCoords;
 std::vector<u32> g_indices;
+std::vector<Mesh> g_meshes;
 std::map<std::string, std::unique_ptr<Texture>> g_textures;
 
 mat4 g_view;
@@ -72,7 +93,7 @@ std::map<std::string, std::unique_ptr<Texture>> loadMaterials(const std::vector<
 				&newTex->width, &newTex->height, &newTex->numChannels, 0));
 
 			if (newTex->buffer == nullptr) {
-				std::cerr << "Could not load material file" << std::endl;
+				std::cerr << "Could not load material file: " << actualMaterialPath << std::endl;
 				throw std::runtime_error("material file load failed");
 			}
 
@@ -83,7 +104,7 @@ std::map<std::string, std::unique_ptr<Texture>> loadMaterials(const std::vector<
 
 void loadScene(
 	const std::string& sceneFileName, 
-	std::vector<vec3>& vertecies, std::vector<vec2>& texCoords, std::vector<u32>& indices,
+	std::vector<vec3>& vertecies, std::vector<vec2>& texCoords, std::vector<u32>& indices, std::vector<Mesh>& meshes,
 	std::map<std::string, std::unique_ptr<Texture>>& textures) {
 	tinyobj::attrib_t attribs;
 	std::vector<tinyobj::shape_t> shapes;
@@ -109,6 +130,40 @@ void loadScene(
 	}
 
 	textures = loadMaterials(materials);	
+
+	std::map<SortedVertex, uint32_t> indexedVertecies;
+	for (const auto& shape : shapes) {
+		auto meshBaseIdx = uint32_t(indices.size());	
+		for (const auto& index : shape.mesh.indices) {
+			auto vertIdx = index.vertex_index;
+			auto texCoordIdx = index.texcoord_index;
+			if (vertIdx == -1 || texCoordIdx == -1) {
+				throw std::runtime_error("missing vertex data");
+			}
+
+			SortedVertex vert{vertIdx, texCoordIdx};	
+			auto foundVert = indexedVertecies.find(vert);
+
+			if (foundVert != indexedVertecies.end()) {
+				indices.push_back(foundVert->second);
+			} else {
+				auto newIdx = indices.size();
+				indexedVertecies[vert] = newIdx;
+				indices.push_back(newIdx);	
+
+				vertecies.push_back(vec3(
+					attribs.vertices[3 * vertIdx + 0], 
+					attribs.vertices[3 * vertIdx + 1], 
+					attribs.vertices[3 * vertIdx + 2]));
+				texCoords.push_back(vec2(
+					attribs.texcoords[2 * texCoordIdx + 0],
+					1.0f - attribs.texcoords[2 * texCoordIdx + 1]));				
+			}
+		}
+
+		Mesh newMesh{meshBaseIdx, u32(shape.mesh.indices.size()), materials[shape.mesh.material_ids[0]].diffuse_texname};
+		meshes.push_back(newMesh); 
+	}
 }
 
 void init(const uvec2& viewport) {
@@ -121,7 +176,7 @@ void init(const uvec2& viewport) {
 		nearPlane, 
 		farPlane);
 
-	loadScene("sponza.obj", g_vertecies, g_texCoords, g_indices, g_textures);
+	loadScene("sponza.obj", g_vertecies, g_texCoords, g_indices, g_meshes, g_textures);
 }
 
 void periodic(GLFWwindow* window, const uvec2& viewport, float* depthBuffer, Color* colorBuffer) {
