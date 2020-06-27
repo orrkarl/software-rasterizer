@@ -1,8 +1,9 @@
 #include "user_data.h"
 
-#include <tinyobjloader/tiny_obj_loader.h>
 #include <map>
 #include <memory>
+#include <stb/stb_image.h>
+#include <tinyobjloader/tiny_obj_loader.h>
 
 #include "converters.h"
 #include "rasterizer.h"
@@ -17,12 +18,10 @@ float frac(float x) {
 }
 
 struct Texture {
-	Texture(u8vec4* tex, u32 w, u32 h) : buffer(tex), width(w), height(h) {
-	}
-
-	std::unique_ptr<u8vec4> buffer;
-	u32 width;
-	u32 height;
+	std::unique_ptr<stbi_uc> buffer;
+	i32 width;
+	i32 height;
+	i32 numChannels;
 };
 
 struct FixedColorShader : MiniFragmentShader<vec3, FixedColorShader> {
@@ -38,9 +37,9 @@ struct Texture2DSamplerShader : MiniFragmentShader<vec2, Texture2DSamplerShader>
 	vec4 shade(vec2 data) {
 		u16 s = frac(data.s) * texture.width - 0.5f;
 		u16 t = frac(data.t) * texture.height - 0.5f;
-		u16 idx = t * texture.width + s;
-		auto buffer = texture.buffer.get();
-		return vec4(buffer[s * texture.width + t]) * (1.0f / 255);
+		u32 idx = (t * texture.width + s) * texture.numChannels;
+		auto bufferAtIdx = texture.buffer.get() + idx;
+		return vec4(bufferAtIdx[0], bufferAtIdx[1], bufferAtIdx[2], 255.0f) * (1.0f / 255);
 	}
 
 	Texture& texture;
@@ -57,9 +56,35 @@ vec3 g_cameraPos(0, -8.5, -5);
 vec3 g_cameraTarget(20, 5, 1);
 vec3 g_cameraUp(0, 1, 0);	
 
+std::map<std::string, std::unique_ptr<Texture>> loadMaterials(const std::vector<tinyobj::material_t>& materials) {
+	std::map<std::string, std::unique_ptr<Texture>> ret;
+	for (const auto& mat : materials) {
+		auto name = mat.diffuse_texname;
+		if (name.empty()) {
+			std::cerr << "Missing texture file" << std::endl;
+			throw std::runtime_error("no tex file");
+		}
+
+		if (ret.find(name) == ret.end()) {
+			auto actualMaterialPath = "../resources/" + name;
+			auto newTex = std::make_unique<Texture>();
+			newTex->buffer = std::unique_ptr<stbi_uc>(stbi_load(actualMaterialPath.c_str(), 
+				&newTex->width, &newTex->height, &newTex->numChannels, 0));
+
+			if (newTex->buffer == nullptr) {
+				std::cerr << "Could not load material file" << std::endl;
+				throw std::runtime_error("material file load failed");
+			}
+
+			ret.insert({name, std::move(newTex)});
+		}
+	}
+}
+
 void loadScene(
 	const std::string& sceneFileName, 
-	std::vector<vec3>& vertecies, std::vector<vec2>& texCoords, std::vector<u32>& indices) {
+	std::vector<vec3>& vertecies, std::vector<vec2>& texCoords, std::vector<u32>& indices,
+	std::map<std::string, std::unique_ptr<Texture>>& textures) {
 	tinyobj::attrib_t attribs;
 	std::vector<tinyobj::shape_t> shapes;
 	std::vector<tinyobj::material_t> materials;
@@ -83,7 +108,7 @@ void loadScene(
 		throw std::runtime_error("TinyObj failed to load");
 	}
 
-	
+	textures = loadMaterials(materials);	
 }
 
 void init(const uvec2& viewport) {
@@ -96,7 +121,7 @@ void init(const uvec2& viewport) {
 		nearPlane, 
 		farPlane);
 
-	loadScene("sponza.obj", g_vertecies, g_texCoords, g_indices);
+	loadScene("sponza.obj", g_vertecies, g_texCoords, g_indices, g_textures);
 }
 
 void periodic(GLFWwindow* window, const uvec2& viewport, float* depthBuffer, Color* colorBuffer) {
