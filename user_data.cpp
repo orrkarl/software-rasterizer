@@ -4,6 +4,9 @@
 #include "rasterizer.h"
 #include "util.h"
 
+using glm::perspective;
+using glm::radians;
+
 struct FixedColorShader : MiniFragmentShader<vec3, FixedColorShader> {
 	vec4 shade(vec3 data) {
 		return {data, 1.0f};
@@ -83,7 +86,7 @@ void init(const uvec2& viewport) {
 	const float zNear = 0.1f;
 	const float zFar = 100.0f;
 
-	g_proj = perspective(glm::radians(60.0f), static_cast<float>(viewport.x) / static_cast<float>(viewport.y), zNear, zFar);
+	g_proj = perspective(radians(60.0f), static_cast<float>(viewport.x) / static_cast<float>(viewport.y), zNear, zFar);
 	g_transforms = generateRandomTransforms();
 }
 

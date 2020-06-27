@@ -13,7 +13,6 @@ float normalizeDepth(const vec4& v) {
 	return (1 + v.z / v.w) * 0.5f;
 }
 
-
 struct TriangleRecord {
 	TriangleRecord(const vec4& v0Clip, const vec4& v1Clip, const vec4& v2Clip, const uvec2& viewport) {
 		auto v0 = rasterFromNDC(v0Clip, viewport);

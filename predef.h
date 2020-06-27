@@ -3,6 +3,8 @@
 #define GLM_FORCE_UNRESTRICTED_GENTYPE
 #define GLM_ENABLE_EXPERIMENTAL
 
+#include <glm/detail/qualifier.hpp>
+
 #include <algorithm>
 #include <array> 
 #include <chrono>
@@ -19,7 +21,13 @@
 #include <type_traits>
 #include <vector>
 
-using namespace glm;
+using glm::mat;
+using glm::mat4;
+using glm::vec;
+using glm::vec2;
+using glm::vec3;
+using glm::vec4;
+using glm::uvec2;
 
 float sum(const vec3& vec);
 
