@@ -9,6 +9,9 @@ using i64 = glm::i64;
 using lmat3 = mat<3, 3, int64_t, glm::highp>;
 using lvec3 = vec<3, int64_t>;
 using u16vec2 = glm::u16vec2;
+using glm::u16;
+using glm::u32;
+using glm::u8vec4;
 
 template <typename T>
 struct DetermineDimension;

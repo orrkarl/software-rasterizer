@@ -7,10 +7,31 @@
 using glm::perspective;
 using glm::radians;
 
+float frac(float x) {
+	float tmp = x - static_cast<i64>(x);
+	return tmp >= 0.0f ? tmp : 1.0f - tmp;
+}
+
 struct FixedColorShader : MiniFragmentShader<vec3, FixedColorShader> {
 	vec4 shade(vec3 data) {
 		return {data, 1.0f};
 	}
+};
+
+struct Texture2DSamplerShader : MiniFragmentShader<vec2, Texture2DSamplerShader> {
+	Texture2DSamplerShader(u8vec4* tex, u32 w, u32 h) : texture(tex), width(w), height(h) {
+	}
+
+	vec4 shade(vec2 data) {
+		u16 s = frac(data.s) * width - 0.5f;
+		u16 t = frac(data.t) * height - 0.5f;
+		u16 idx = t * width + s;
+		return vec4(texture[s * width + t]) * (1.0f / 255);
+	}
+
+	u8vec4* texture;
+	u32 width;
+	u32 height;
 };
 
 std::vector<mat4> generateRandomTransforms() {
