@@ -99,27 +99,27 @@ const std::vector<vec3> g_cubeColors{
 std::vector<mat4> g_transforms;
 mat4 g_view;
 mat4 g_proj;
-vec3 g_cameraPos{0.0f, 3.75f, 6.5f};
-vec3 g_cameraTarget{0.0f, 0.0f, 0.0f};
-vec3 g_cameraUp{0.0f, 1.0f, 0.0f};	
+vec3 g_cameraPos(0, -8.5, -5);
+vec3 g_cameraTarget(20, 5, 1);
+vec3 g_cameraUp(0, 1, 0);	
 
 void init(const uvec2& viewport) {
-	const float zNear = 0.1f;
-	const float zFar = 100.0f;
-
-	g_proj = perspective(radians(60.0f), static_cast<float>(viewport.x) / static_cast<float>(viewport.y), zNear, zFar);
-	g_transforms = generateRandomTransforms();
+	float nearPlane = 0.125f;
+	float farPlane = 5000.f;
+	
+	g_proj = glm::perspective(
+		glm::radians(60.f), 
+		static_cast<float>(viewport.x) / static_cast<float>(viewport.y), 
+		nearPlane, 
+		farPlane);
 }
 
 void periodic(GLFWwindow* window, const uvec2& viewport, float* depthBuffer, Color* colorBuffer) {
 	constexpr float ANGLE = M_PI / 15;
-	if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
-		g_cameraPos = vec3(glm::eulerAngleY(ANGLE) * vec4(g_cameraPos, 1.0f));
-	}
-	if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
-		g_cameraPos = vec3(glm::eulerAngleY(-ANGLE) * vec4(g_cameraPos, 1.0f));	
-	}
+
 	g_view = lookAt(g_cameraPos, g_cameraTarget, g_cameraUp);
+	g_view = glm::rotate(g_view, glm::radians(-30.f), glm::vec3(0, 1, 0));
+
 	for (const auto& transform : g_transforms) {		
 		auto mvp = g_proj * g_view * transform;
 		rasterTriangleIndexed<FixedColorShader>(
