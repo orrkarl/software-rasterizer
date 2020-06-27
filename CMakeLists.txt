@@ -11,8 +11,10 @@ SET(SRCS
 	util.cpp 
 	user_data.cpp 
 	clipping.cpp
-	stb_image.c)
+	dependencies/tinyobjloader/tiny_obj_loader.cpp
+	dependencies/stb/stb_image.cpp)
 
 add_executable(raster ${SRCS})
 target_link_libraries(raster OpenGL::GL glfw glm)
+target_include_directories(raster PRIVATE dependencies)
 
