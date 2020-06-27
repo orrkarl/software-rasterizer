@@ -2,6 +2,7 @@
 
 #include <map>
 #include <memory>
+#include <ostream>
 #include <stb/stb_image.h>
 #include <stdexcept>
 #include <tinyobjloader/tiny_obj_loader.h>
@@ -67,7 +68,7 @@ struct Texture2DSamplerShader : MiniFragmentShader<vec2, Texture2DSamplerShader>
 
 std::vector<vec3> g_vertecies;
 std::vector<vec2> g_texCoords;
-std::vector<u32> g_indices;
+std::vector<std::array<u32, 3>> g_indices;
 std::vector<Mesh> g_meshes;
 std::map<std::string, std::unique_ptr<Texture>> g_textures;
 
@@ -97,14 +98,18 @@ std::map<std::string, std::unique_ptr<Texture>> loadMaterials(const std::vector<
 				throw std::runtime_error("material file load failed");
 			}
 
-			ret.insert({name, std::move(newTex)});
+			ret[name] = std::move(newTex);
 		}
 	}
+
+	return ret;
 }
 
 void loadScene(
 	const std::string& sceneFileName, 
-	std::vector<vec3>& vertecies, std::vector<vec2>& texCoords, std::vector<u32>& indices, std::vector<Mesh>& meshes,
+	std::vector<vec3>& vertecies, std::vector<vec2>& texCoords, 
+	std::vector<std::array<u32, 3>>& indices, 
+	std::vector<Mesh>& meshes,
 	std::map<std::string, std::unique_ptr<Texture>>& textures) {
 	tinyobj::attrib_t attribs;
 	std::vector<tinyobj::shape_t> shapes;
@@ -132,9 +137,18 @@ void loadScene(
 	textures = loadMaterials(materials);	
 
 	std::map<SortedVertex, uint32_t> indexedVertecies;
+	indices.push_back({});
+
 	for (const auto& shape : shapes) {
 		auto meshBaseIdx = uint32_t(indices.size());	
+
+		u32 triangleVertexIdx = 0;
 		for (const auto& index : shape.mesh.indices) {
+			if (triangleVertexIdx == 3) {
+				indices.push_back({});
+				triangleVertexIdx = 0;
+			}
+
 			auto vertIdx = index.vertex_index;
 			auto texCoordIdx = index.texcoord_index;
 			if (vertIdx == -1 || texCoordIdx == -1) {
@@ -144,13 +158,13 @@ void loadScene(
 			SortedVertex vert{vertIdx, texCoordIdx};	
 			auto foundVert = indexedVertecies.find(vert);
 
+			u32 currentIndex;
 			if (foundVert != indexedVertecies.end()) {
-				indices.push_back(foundVert->second);
+				currentIndex = foundVert->second;
 			} else {
-				auto newIdx = indices.size();
-				indexedVertecies[vert] = newIdx;
-				indices.push_back(newIdx);	
-
+				currentIndex = 3 * u32(indices.size()) + triangleVertexIdx;
+				indexedVertecies[vert] = currentIndex;
+				
 				vertecies.push_back(vec3(
 					attribs.vertices[3 * vertIdx + 0], 
 					attribs.vertices[3 * vertIdx + 1], 
@@ -159,9 +173,11 @@ void loadScene(
 					attribs.texcoords[2 * texCoordIdx + 0],
 					1.0f - attribs.texcoords[2 * texCoordIdx + 1]));				
 			}
+
+			indices.back()[triangleVertexIdx++] = currentIndex;
 		}
 
-		Mesh newMesh{meshBaseIdx, u32(shape.mesh.indices.size()), materials[shape.mesh.material_ids[0]].diffuse_texname};
+		Mesh newMesh{meshBaseIdx, u32(shape.mesh.indices.size() / 3), materials[shape.mesh.material_ids[0]].diffuse_texname};
 		meshes.push_back(newMesh); 
 	}
 }
@@ -186,6 +202,20 @@ void periodic(GLFWwindow* window, const uvec2& viewport, float* depthBuffer, Col
 	g_view = glm::rotate(g_view, glm::radians(-30.f), glm::vec3(0, 1, 0));
 
 	auto mvp = g_proj * g_view;
-
+	u32 left = g_meshes.size();
+	for (const auto& mesh : g_meshes) {
+		auto begin = g_indices.begin() + mesh.baseIndex;
+		auto end = begin + mesh.indexCount;
+		auto shader = Texture2DSamplerShader(*g_textures[mesh.texName]);
+		auto i = shader.texture.height;
+		rasterTriangleIndexed<Texture2DSamplerShader>(
+			viewport, 
+			g_vertecies, 
+			g_texCoords, 
+			std::vector<std::array<u32, 3>>{begin, end},
+			mvp, 
+			shader, 
+			depthBuffer, colorBuffer);
+	}
 }
 
